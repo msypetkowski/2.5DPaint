@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.1.0)
 
-project(cuda-qt-boilerplate)
+project(cuda-qt-starter)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_BINARY_DIR "${CMAKE_SOURCE_DIR}/build")
@@ -14,11 +14,12 @@ set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_BINARY_DIR})
 # QT
 # Set your qt version and configuration (example: gcc_64, msvc2015)
 set(QT_VERSION "5.11.2")
-set(QT_CONFIG "msvc2017_64")
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    set(QT_CONFIG "gcc_64")
 	set(CMAKE_PREFIX_PATH "~/Qt${QT_VERSION}/${QT_VERSION}/${QT_CONFIG}")
 elseif(WIN32 OR WIN64)
+    set(QT_CONFIG "msvc2017_64")
     set(CMAKE_PREFIX_PATH "C:\\Qt\\${QT_VERSION}\\${QT_CONFIG}\\")
 endif()
 
@@ -71,7 +72,7 @@ list(APPEND CUDA_NVCC_FLAGS -arch=sm_35)
 
 # Linux-specific hacks/fixes
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    list(APPEND CMAKE_EXE_LINKER_FLAGS "-lX11 -lXxf86vm -lXrandr -lXi")
+    list(APPEND CMAKE_EXE_LINKER_FLAGS "-lX11 -lXxf86vm")
 endif()
 
 # CUDA linking
@@ -84,7 +85,11 @@ set(CUDA_SEPARABLE_COMPILATION OFF)
 set(CUDA_VERBOSE_BUILD ON)
 
 # include cuda samples headers
-include_directories("$ENV{NVCUDASAMPLES_ROOT}\\common\\inc")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    include_directories("~/NVIDIA_CUDA-${CUDA_VERSION_STRING}_Samples/common/inc")
+elseif(WIN32 OR WIN64)
+    include_directories("$ENV{NVCUDASAMPLES_ROOT}\\common\\inc")
+endif()
 
 #executables
 
