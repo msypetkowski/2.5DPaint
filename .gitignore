@@ -5,3 +5,6 @@ CMakeFiles/
 Makefile
 cmake_install.cmake
 cuda-qt-starter_autogen/
+
+.idea/
+cuda-qt-starter.cbp
