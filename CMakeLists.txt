@@ -55,7 +55,8 @@ file(GLOB_RECURSE PROJECT_SRCS
     "${SRC_DIR}/*.c"
 
 	"${CUDA_SRC_DIR}/*.cu"
-	"${CUDA_SRC_DIR}/*.cuh"
+        "${CUDA_SRC_DIR}/*.cpp"
+        "${CUDA_SRC_DIR}/*.cuh"
 	"${CUDA_SRC_DIR}/*.h"
 )
 

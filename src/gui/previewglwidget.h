@@ -8,6 +8,8 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 
+#include "../brush.h"
+
 class PreviewGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
 	Q_OBJECT
@@ -17,6 +19,8 @@ public:
 
 	QString getGLinfo();
 	void reloadTexture(int, int);
+
+	void setBrushSettings(const BrushSettings& bs) { brushSettings = bs; }
 
 protected:
     void initializeGL() override;
@@ -48,12 +52,17 @@ private:
 	void initVAO();
 	void imageTextureInit(int, int);
 
+	void initCPUBuffers();
+
     bool cudaEnabled;
+
+	BrushSettings brushSettings;
+
 
 public slots:
 	void refresh(int, double);
 
-    void enableCUDA(bool enable) {cudaEnabled = enable;}
+	void enableCUDA(bool enable) {cudaEnabled = enable; }
 };
 
 #endif // PREVIEWGLWIDGET_H

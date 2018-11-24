@@ -7,6 +7,8 @@
 #include "kernel.h"
 #include "mainwindow.h"
 
+#include "kernel_cpu.h"
+
 // shader programs
 /*const char* shaderVertDefault = "	\
 	#version 330 core				\
@@ -34,9 +36,6 @@ const char* shaderFragDefault = "						\
 
 // cuda pbo image resource
 static cudaGraphicsResource* viewPBO_cuda;
-
-// cpu buffer (used when CUDA disabled)
-static QVector<uchar4> cpu_buffer;
 
 PreviewGLWidget::PreviewGLWidget(QWidget* parent)
 	: m_pbo(0), m_texcoords(0), m_indices(0),
@@ -188,6 +187,24 @@ void PreviewGLWidget::imageTextureInit(int w, int h) {
 	m_texture->allocateStorage(QOpenGLTexture::BGRA, QOpenGLTexture::UInt8);
 }
 
+void PreviewGLWidget::initCPUBuffers()
+{
+		int buf_size = width * height;
+
+			printf("init/resize cpu buffers\n");
+			cpu_buffer.resize(buf_size);
+			cpu_buffer_color.resize(buf_size);
+			cpu_buffer_height.resize(buf_size);
+
+			uchar4 fill;
+			fill.x = 125; fill.y = 125; fill.z = 125; fill.w = 255;
+			cpu_buffer_color.fill(fill);
+			cpu_buffer_height.fill(0.0);
+			// cpu_buffer.fill(fill);
+			update_whole_display(width, height);
+
+}
+
 void PreviewGLWidget::initializeGL()
 {
 	initializeOpenGLFunctions();
@@ -270,10 +287,13 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event)
 	} else {
 		assert(pbo_dptr);
 		int buf_size = width * height;
-		if (cpu_buffer.size() != buf_size)
-			cpu_buffer.resize(buf_size);
-		checkCudaErrors(cudaMemcpy(&cpu_buffer[0], pbo_dptr, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
-		// TODO: implement brushes here
+		if (cpu_buffer.size() != buf_size) {
+			initCPUBuffers();
+		} else {
+			checkCudaErrors(cudaMemcpy(&cpu_buffer[0], pbo_dptr, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
+		}
+		assert(cpu_buffer.size() == buf_size);
+		brush_basic(width, height, lastPos.x(), lastPos.y(), brushSettings);
 		checkCudaErrors(cudaMemcpy(pbo_dptr, &cpu_buffer[0], buf_size * sizeof(uchar4), cudaMemcpyHostToDevice));
 	}
 	update();

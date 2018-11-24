@@ -45,8 +45,3 @@ int cuda_main(int w, int h, int mx, int my) {
 	}
 	return cudaGetLastError();
 }
-
-
-void copy_buffer_from_device(uchar4* from, uchar4* to, unsigned long size){
-	checkCudaErrors(cudaMemcpy(from, to, size, cudaMemcpyDeviceToHost));
-}

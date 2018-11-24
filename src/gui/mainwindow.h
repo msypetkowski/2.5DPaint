@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+#include "../brush.h"
+
 namespace Ui {
 class MainWindow;
 }
@@ -15,8 +17,13 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+public slots:
+	void updateSettings();
+
 private:
     Ui::MainWindow *ui;
+
+	BrushSettings brushSettings;
 };
 
 #endif // MAINWINDOW_H
