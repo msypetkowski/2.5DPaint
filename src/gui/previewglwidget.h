@@ -48,8 +48,12 @@ private:
 	void initVAO();
 	void imageTextureInit(int, int);
 
+    bool cudaEnabled;
+
 public slots:
 	void refresh(int, double);
+
+    void enableCUDA(bool enable) {cudaEnabled = enable;}
 };
 
 #endif // PREVIEWGLWIDGET_H

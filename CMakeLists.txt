@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required(VERSION 3.1.0)
 
-project(cuda-qt-starter)
+project(2.5DPaint)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_BINARY_DIR "${CMAKE_SOURCE_DIR}/build")
@@ -87,6 +87,7 @@ set(CUDA_VERBOSE_BUILD ON)
 # include cuda samples headers
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     include_directories("~/NVIDIA_CUDA-${CUDA_VERSION_STRING}_Samples/common/inc")
+    include_directories("/opt/cuda/samples/common/inc/") # default arch linux cuda inc path
 elseif(WIN32 OR WIN64)
     include_directories("$ENV{NVCUDASAMPLES_ROOT}\\common\\inc")
 endif()

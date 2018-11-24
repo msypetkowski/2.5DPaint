@@ -31,7 +31,7 @@
      <number>0</number>
     </property>
     <item>
-     <widget class="PreviewGLWidget" name="openGLWidget">
+     <widget class="PreviewGLWidget" name="openGLWidget" native="true">
       <property name="cursor">
        <cursorShape>CrossCursor</cursorShape>
       </property>
@@ -48,7 +48,7 @@
      <x>0</x>
      <y>0</y>
      <width>740</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -80,6 +80,16 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_3">
     <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QCheckBox" name="enableCudaCheckBox">
+       <property name="text">
+        <string>Enable CUDA</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
      <item>
       <widget class="QGroupBox" name="groupBox">
        <property name="title">
@@ -180,6 +190,13 @@
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>PreviewGLWidget</class>
+   <extends>QWidget</extends>
+   <header>previewglwidget.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

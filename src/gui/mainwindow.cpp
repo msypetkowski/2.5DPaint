@@ -6,6 +6,10 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    auto glwidget = ui->openGLWidget;
+    auto checkbox = ui->enableCudaCheckBox;
+    assert(connect(checkbox, SIGNAL(clicked(bool)), glwidget, SLOT(enableCUDA(bool))));
 }
 
 MainWindow::~MainWindow()

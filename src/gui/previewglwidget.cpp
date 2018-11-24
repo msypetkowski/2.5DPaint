@@ -5,6 +5,7 @@
 #include <QMouseEvent>
 
 #include "kernel.h"
+#include "mainwindow.h"
 
 // shader programs
 /*const char* shaderVertDefault = "	\
@@ -34,9 +35,12 @@ const char* shaderFragDefault = "						\
 // cuda pbo image resource
 static cudaGraphicsResource* viewPBO_cuda;
 
+// cpu buffer (used when CUDA disabled)
+static QVector<uchar4> cpu_buffer;
+
 PreviewGLWidget::PreviewGLWidget(QWidget* parent)
 	: m_pbo(0), m_texcoords(0), m_indices(0),
-	m_vertices(0), m_texture(0), QOpenGLWidget(parent) {}
+	  m_vertices(0), m_texture(0), QOpenGLWidget(parent) {}
 
 PreviewGLWidget::~PreviewGLWidget()
 {
@@ -254,14 +258,24 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event)
 	int dy = event->y() - lastPos.y();
 
 	/*if (event->buttons() & Qt::LeftButton) {
-		
+
 	}
 	else if (event->buttons() & Qt::RightButton) {
-		
+
 	}*/
 	lastPos = event->pos();
 
-	cuda_main(width, height, lastPos.x(), lastPos.y());
+	if (cudaEnabled) {
+		cuda_main(width, height, lastPos.x(), lastPos.y());
+	} else {
+		assert(pbo_dptr);
+		int buf_size = width * height;
+		if (cpu_buffer.size() != buf_size)
+			cpu_buffer.resize(buf_size);
+		checkCudaErrors(cudaMemcpy(&cpu_buffer[0], pbo_dptr, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
+		// TODO: implement brushes here
+		checkCudaErrors(cudaMemcpy(pbo_dptr, &cpu_buffer[0], buf_size * sizeof(uchar4), cudaMemcpyHostToDevice));
+	}
 	update();
 
 	printf("PreviewGLWidget::mouseMoveEvent(): %dx%d (dx:=%d, dy=%d)\n", event->x(), event->y(), dx, dy);
