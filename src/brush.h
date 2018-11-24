@@ -6,5 +6,6 @@ struct BrushSettings {
 	qreal pressure;
 	qreal heightPressure;
 	qreal size;
+	qreal falloff;
 	QVector3D color;
 };

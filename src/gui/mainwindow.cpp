@@ -15,6 +15,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	assert(connect(ui->brushSizeSpinBox, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
 
 	assert(connect(ui->brushSizeSpinBox, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
+	assert(connect(ui->brushFalloff, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
 
 	assert(connect(ui->colorR, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
 	assert(connect(ui->colorG, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
@@ -33,11 +34,11 @@ void MainWindow::updateSettings()
 	brushSettings.pressure = ui->brushPressureSpinBox->value();
 	brushSettings.heightPressure = ui->heightPressureSpinBox->value();
 	brushSettings.size = ui->brushSizeSpinBox->value();
+	brushSettings.falloff = ui->brushFalloff->value();
 
 	brushSettings.color.setX(ui->colorR->value());
 	brushSettings.color.setY(ui->colorG->value());
 	brushSettings.color.setZ(ui->colorB->value());
-
 
 	ui->openGLWidget->setBrushSettings(brushSettings);
 }

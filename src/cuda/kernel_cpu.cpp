@@ -56,10 +56,9 @@ void update_display(int x, int y) {
 	auto normal = get_normal(x,y);
 
 	// TODO: consider differen function or use (sample by normal) matcap texture
-	qreal shadow = normal.z() + (sample_height(x,y)) / 2;
+	qreal shadow = normal.z() * 0.70 + normal.x()*0.15 + normal.y()*0.15 + (sample_height(x,y)) / 4;
 	shadow = qBound(0.0, shadow, 1.0);
 
-	uchar4 ret;
 	uchar4 color = cpu_buffer_color[i];
 	color.x = color.x * shadow;
 	color.y = color.y * shadow;
@@ -87,9 +86,15 @@ qreal lerp(qreal v1, qreal v2, qreal weight) {
 	return v1 * (1 - weight) + v2 * weight;
 }
 
+qreal cosine_fallof(qreal val, qreal falloff) {
+	assert(val >= 0.0);
+	assert(val <= 1.0);
+	val = qPow(val, falloff);
+	return (qCos(val  * M_PI) + 1) * 0.5;
+}
+
 uchar4 interpolate_color(uchar4 inputColor, qreal strength, const BrushSettings& bs) {
 	uchar4 ret;
-	strength *= bs.pressure;
 	ret.x = qBound(0.0, lerp(inputColor.x, bs.color.x() * 255.0, strength), 255.0);
 	ret.y = qBound(0.0, lerp(inputColor.y, bs.color.y() * 255.0, strength), 255.0);
 	ret.z = qBound(0.0, lerp(inputColor.z, bs.color.z() * 255.0, strength), 255.0);
@@ -106,17 +111,18 @@ void brush_basic(int w1, int h1, int mx, int my, const BrushSettings& bs) {
 				continue;
 
 			qreal radius = qSqrt((x-mx) * (x-mx) + (y-my) * (y-my));
-			assert(radius>=0);
 			if (radius > maxRadius) {
 				continue;
 			}
 			int	i = w - 1 - x + (y * w);
 
-			qreal strength = (maxRadius - radius) / maxRadius;
+			// paint color
+			qreal strength = bs.pressure * cosine_fallof(radius / maxRadius, bs.falloff);
 			cpu_buffer_color[i] = interpolate_color(cpu_buffer_color[i], strength, bs);
 
-			qreal hstrength = bs.heightPressure * (maxRadius - radius) / maxRadius;
-			cpu_buffer_height[i] = qBound(-1.0, cpu_buffer_height[i] + hstrength, 1.0);
+			// paint height
+			strength = bs.heightPressure * cosine_fallof(radius / maxRadius, bs.falloff);
+			cpu_buffer_height[i] = qBound(-1.0, cpu_buffer_height[i] + strength, 1.0);
 		}
 	}
 

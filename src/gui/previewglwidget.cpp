@@ -290,6 +290,7 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event)
 		if (cpu_buffer.size() != buf_size) {
 			initCPUBuffers();
 		} else {
+			// TODO: this may be not needed if not used together with GPU
 			checkCudaErrors(cudaMemcpy(&cpu_buffer[0], pbo_dptr, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
 		}
 		assert(cpu_buffer.size() == buf_size);
