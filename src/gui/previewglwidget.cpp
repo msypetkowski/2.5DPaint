@@ -283,7 +283,12 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event)
 	lastPos = event->pos();
 
 	if (cudaEnabled) {
+		performanceTimer.restart();
 		cuda_main(width, height, lastPos.x(), lastPos.y());
+		qint64 elapsed_time = performanceTimer.nsecsElapsed();
+
+		printf("[CUDA GPU] BRUSH APPLY TIME: cuda_main(w=%d, h=%d, mx=%d, my=%d): %.6f ms\n", width, height, lastPos.x(),
+			   lastPos.y(), (float)elapsed_time / 1000000.0f);
 	} else {
 		assert(pbo_dptr);
 		int buf_size = width * height;
@@ -294,8 +299,18 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event)
 			checkCudaErrors(cudaMemcpy(&cpu_buffer[0], pbo_dptr, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
 		}
 		assert(cpu_buffer.size() == buf_size);
+
+		performanceTimer.restart();
 		brush_basic(width, height, lastPos.x(), lastPos.y(), brushSettings);
+		qint64 elapsed_time = performanceTimer.nsecsElapsed();
+
+		performanceTimer.restart();
 		checkCudaErrors(cudaMemcpy(pbo_dptr, &cpu_buffer[0], buf_size * sizeof(uchar4), cudaMemcpyHostToDevice));
+		qint64 elapsed_time_memcpy = performanceTimer.nsecsElapsed();
+
+		printf("[CPU] BRUSH APPLY TIME: brush_basic(w=%d, h=%d, mx=%d, my=%d, brushSettings=...): %.6f ms\n", width, height, lastPos.x(),
+			   lastPos.y(), (float)elapsed_time / 1000000.0f);
+		printf("[CPU] COPY BUFFER TO RENDER TIME: cudaMemcpy(pbo_dptr, &cpu_buffer[0], buf_size * sizeof(uchar4), cudaMemcpyHostToDevice): %.6f ms\n", (float)elapsed_time_memcpy / 1000000.0f);
 	}
 	update();
 

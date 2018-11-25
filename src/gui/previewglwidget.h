@@ -7,6 +7,7 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
+#include <QtCore/QElapsedTimer>
 
 #include "../brush.h"
 
@@ -58,6 +59,7 @@ private:
 
 	BrushSettings brushSettings;
 
+    QElapsedTimer performanceTimer;
 
 public slots:
 	void refresh(int, double);
