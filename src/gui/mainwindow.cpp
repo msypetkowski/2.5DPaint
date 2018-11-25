@@ -9,6 +9,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     auto glwidget = ui->openGLWidget;
 	assert(connect(ui->enableCudaCheckBox, SIGNAL(clicked(bool)), glwidget, SLOT(enableCUDA(bool))));
+	glwidget->enableCUDA(ui->enableCudaCheckBox->isChecked());
 
 	assert(connect(ui->brushPressureSpinBox, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
 	assert(connect(ui->heightPressureSpinBox, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
