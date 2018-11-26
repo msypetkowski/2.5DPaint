@@ -13,6 +13,10 @@ qreal lerp(qreal v1, qreal v2, qreal weight) {
 	return v1 * (1 - weight) + v2 * weight;
 }
 
+Color lerp(Color c1, Color c2, qreal weight) {
+	return c1 * (1 - weight) + c2 * weight;
+}
+
 qreal cosine_fallof(qreal val, qreal falloff) {
 	assert(val >= 0.0);
 	assert(val <= 1.0);
@@ -20,11 +24,10 @@ qreal cosine_fallof(qreal val, qreal falloff) {
 	return (qCos(val  * M_PI) + 1) * 0.5;
 }
 
-uchar4 interpolate_color(uchar4 inputColor, qreal strength, const BrushSettings& bs) {
-	uchar4 ret;
-	ret.x = qBound(0.0, lerp(inputColor.x, bs.color.x() * 255.0, strength), 255.0);
-	ret.y = qBound(0.0, lerp(inputColor.y, bs.color.y() * 255.0, strength), 255.0);
-	ret.z = qBound(0.0, lerp(inputColor.z, bs.color.z() * 255.0, strength), 255.0);
+Color interpolate_color(Color inputColor, qreal strength, const BrushSettings& bs) {
+	Color ret;
+	ret = lerp(inputColor, bs.color, strength);
+	ret = qBound(Color(0,0,0), ret, Color(255,255,255));
 	return ret;
 }
 
@@ -85,22 +88,19 @@ void CPUPainter::updateDisplay(int x, int y) {
 	qreal shadow = normal.z() * 0.80 - normal.x()*0.1 - normal.y()*0.1 + (sampleHeight(x,y)) / 4;
 	shadow = qBound(0.0, shadow, 1.0);
 
-
 	qreal specular = 1 - (normal - lighting).length();
 	specular = qPow(specular, 8);
 	specular = qBound(0.0, specular, 1.0);
 
-	uchar4 color = cpuBufferColor[i];
-	color.x = lerp(color.x * shadow, 255, specular);
-	color.y = lerp(color.y * shadow, 255, specular);
-	color.z = lerp(color.z * shadow, 255, specular);
+	Color color = cpuBufferColor[i];
+	color = lerp(color * shadow, Color(255, 255, 255), specular);
 
 	// view normals (TODO: remove or make normals visualization feature)
 	// color.x = normal.x()*255.0/2 + 255.0/2;
 	// color.y = normal.y()*255.0/2 + 255.0/2;
 	// color.z = normal.z()*255;
 
-	cpuBuffer[i] = color;
+	cpuBuffer[i] = color.getAsUchar4();
 }
 
 void CPUPainter::updateWholeDisplay() {
@@ -123,8 +123,7 @@ void CPUPainter::setDimensions(int w1, int h1)
 	cpuBufferColor.resize(buf_size);
 	cpuBufferHeight.resize(buf_size);
 
-	uchar4 fill;
-	fill.x = 125; fill.y = 125; fill.z = 125; fill.w = 255;
+	Color fill(125, 125, 125);
 	cpuBufferColor.fill(fill);
 	cpuBufferHeight.fill(0.0);
 	// cpu_buffer.fill(fill);

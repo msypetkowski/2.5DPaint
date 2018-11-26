@@ -37,9 +37,9 @@ void MainWindow::updateSettings()
 	brushSettings.size = ui->brushSizeSpinBox->value();
 	brushSettings.falloff = ui->brushFalloff->value();
 
-	brushSettings.color.setX(ui->colorR->value());
-	brushSettings.color.setY(ui->colorG->value());
-	brushSettings.color.setZ(ui->colorB->value());
+	brushSettings.color.x = ui->colorR->value() * 255;
+	brushSettings.color.y = ui->colorG->value() * 255;
+	brushSettings.color.z = ui->colorB->value() * 255;
 
 	ui->openGLWidget->setBrushSettings(brushSettings);
 }

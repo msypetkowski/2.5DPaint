@@ -2,8 +2,10 @@
 #include "cuda_runtime.h"
 
 #include <QVector>
+#include <QColor>
 
 #include "../brush.h"
+
 
 
 class CPUPainter {
@@ -33,7 +35,7 @@ private:
 	QVector<uchar4> cpuBuffer;
 
 	// internal representation buffers
-	QVector<uchar4> cpuBufferColor;
+	QVector<Color> cpuBufferColor;
 	QVector<qreal> cpuBufferHeight;
 
 	BrushSettings brushSettings;
