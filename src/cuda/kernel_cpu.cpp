@@ -9,6 +9,10 @@ extern QVector<qreal> cpu_buffer_height=QVector<qreal>();
 // TODO: make class not globals
 static int w, h;
 
+int get_buffer_index(int x, int y) {
+	return w - 1 - x + (y * w);
+}
+
 bool in_bounds(int x, int y) {
 	return x >= 0 && x < w && y >= 0 && y < h;
 }
@@ -16,7 +20,7 @@ bool in_bounds(int x, int y) {
 qreal sample_height(int x, int y) {
 	x = qBound(0, x, w-1);
 	y = qBound(0, y, h-1);
-	return cpu_buffer_height[w - x + (y * w)];
+	return cpu_buffer_height[get_buffer_index(x,y)];
 }
 
 qreal normal_from_delta(qreal dx) {
@@ -47,22 +51,36 @@ QVector3D get_normal(int x, int y) {
 
 	assert(qAbs(dx) <= 1);
 	assert(qAbs(dy) <= 1);
-	return QVector3D(dx, dy, sqrt(1 - dx*dx - dy*dy));
+	auto ret = QVector3D(dx, dy, sqrt(1 - dx*dx - dy*dy));
+	ret.normalize();
+	return ret;
+}
+
+qreal lerp(qreal v1, qreal v2, qreal weight) {
+	return v1 * (1 - weight) + v2 * weight;
 }
 
 void update_display(int x, int y) {
-	int	i = w - 1 - x + (y * w);
+	int	i = get_buffer_index(x,y);
 
 	auto normal = get_normal(x,y);
 
-	// TODO: consider differen function or use (sample by normal) matcap texture
-	qreal shadow = normal.z() * 0.70 + normal.x()*0.15 + normal.y()*0.15 + (sample_height(x,y)) / 4;
+	QVector3D lighting(0.07, 0.07, 1.0);
+	lighting.normalize();
+
+	// TODO: use lighting vector here
+	qreal shadow = normal.z() * 0.80 - normal.x()*0.1 - normal.y()*0.1 + (sample_height(x,y)) / 4;
 	shadow = qBound(0.0, shadow, 1.0);
 
+
+	qreal specular = 1 - (normal - lighting).length();
+	specular = qPow(specular, 8);
+	specular = qBound(0.0, specular, 1.0);
+
 	uchar4 color = cpu_buffer_color[i];
-	color.x = color.x * shadow;
-	color.y = color.y * shadow;
-	color.z = color.z * shadow;
+	color.x = lerp(color.x * shadow, 255, specular);
+	color.y = lerp(color.y * shadow, 255, specular);
+	color.z = lerp(color.z * shadow, 255, specular);
 
 	// view normals (TODO: remove or make normals visualization feature)
 	// color.x = normal.x()*255.0/2 + 255.0/2;
@@ -80,10 +98,6 @@ void update_whole_display(int w1, int h1) {
 			update_display(x,y);
 		}
 	}
-}
-
-qreal lerp(qreal v1, qreal v2, qreal weight) {
-	return v1 * (1 - weight) + v2 * weight;
 }
 
 qreal cosine_fallof(qreal val, qreal falloff) {
@@ -114,7 +128,7 @@ void brush_basic(int w1, int h1, int mx, int my, const BrushSettings& bs) {
 			if (radius > maxRadius) {
 				continue;
 			}
-			int	i = w - 1 - x + (y * w);
+			int	i = get_buffer_index(x,y);
 
 			// paint color
 			qreal strength = bs.pressure * cosine_fallof(radius / maxRadius, bs.falloff);
