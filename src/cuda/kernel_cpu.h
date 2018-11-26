@@ -5,14 +5,37 @@
 
 #include "../brush.h"
 
-// these buffers are used when CUDA disabled
 
-// buffer for display information
-extern QVector<uchar4> cpu_buffer;
+class CPUPainter {
+public:
+	CPUPainter() {}
 
-// internal representation buffers
-extern QVector<uchar4> cpu_buffer_color;
-extern QVector<qreal> cpu_buffer_height;
+	void setDimensions(int w, int h);
+	void setBrush(const BrushSettings& bs) { brushSettings = bs; }
 
-void update_whole_display(int w1, int h1);
-void brush_basic(int w, int h, int mx, int my, const BrushSettings&);
+	void updateWholeDisplay();
+	void brushBasic(int mx, int my);
+
+	int getWidth() { return w; }
+	int getHeight() { return h; }
+
+	void* getBufferPtr() { return &cpuBuffer[0]; }
+
+private:
+	int getBufferIndex(int x, int y);
+	bool inBounds(int x, int y);
+	qreal sampleHeight(int x, int y);
+	QVector3D getNormal(int x, int y);
+
+	void updateDisplay(int x, int y);
+
+	// buffer for display information
+	QVector<uchar4> cpuBuffer;
+
+	// internal representation buffers
+	QVector<uchar4> cpuBufferColor;
+	QVector<qreal> cpuBufferHeight;
+
+	BrushSettings brushSettings;
+	int w, h;
+};

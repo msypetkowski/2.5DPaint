@@ -10,6 +10,7 @@
 #include <QtCore/QElapsedTimer>
 
 #include "../brush.h"
+#include "kernel_cpu.h"
 
 class PreviewGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -53,13 +54,13 @@ private:
 	void initVAO();
 	void imageTextureInit(int, int);
 
-	void initCPUBuffers();
-
     bool cudaEnabled;
 
 	BrushSettings brushSettings;
 
     QElapsedTimer performanceTimer;
+
+	CPUPainter cpuPainter;
 
 public slots:
 	void refresh(int, double);

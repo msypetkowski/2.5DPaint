@@ -187,24 +187,6 @@ void PreviewGLWidget::imageTextureInit(int w, int h) {
 	m_texture->allocateStorage(QOpenGLTexture::BGRA, QOpenGLTexture::UInt8);
 }
 
-void PreviewGLWidget::initCPUBuffers()
-{
-		int buf_size = width * height;
-
-			printf("init/resize cpu buffers\n");
-			cpu_buffer.resize(buf_size);
-			cpu_buffer_color.resize(buf_size);
-			cpu_buffer_height.resize(buf_size);
-
-			uchar4 fill;
-			fill.x = 125; fill.y = 125; fill.z = 125; fill.w = 255;
-			cpu_buffer_color.fill(fill);
-			cpu_buffer_height.fill(0.0);
-			// cpu_buffer.fill(fill);
-			update_whole_display(width, height);
-
-}
-
 void PreviewGLWidget::initializeGL()
 {
 	initializeOpenGLFunctions();
@@ -292,20 +274,20 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event)
 	} else {
 		assert(pbo_dptr);
 		int buf_size = width * height;
-		if (cpu_buffer.size() != buf_size) {
-			initCPUBuffers();
+		if (cpuPainter.getWidth() != width || cpuPainter.getHeight() != height) {
+			cpuPainter.setDimensions(width, height);
 		} else {
 			// TODO: this may be not needed if not used together with GPU
-			checkCudaErrors(cudaMemcpy(&cpu_buffer[0], pbo_dptr, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
+			checkCudaErrors(cudaMemcpy(cpuPainter.getBufferPtr(), pbo_dptr, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
 		}
-		assert(cpu_buffer.size() == buf_size);
 
 		performanceTimer.restart();
-		brush_basic(width, height, lastPos.x(), lastPos.y(), brushSettings);
+		cpuPainter.setBrush(brushSettings);
+		cpuPainter.brushBasic(lastPos.x(), lastPos.y());
 		qint64 elapsed_time = performanceTimer.nsecsElapsed();
 
 		performanceTimer.restart();
-		checkCudaErrors(cudaMemcpy(pbo_dptr, &cpu_buffer[0], buf_size * sizeof(uchar4), cudaMemcpyHostToDevice));
+		checkCudaErrors(cudaMemcpy(pbo_dptr, cpuPainter.getBufferPtr(), buf_size * sizeof(uchar4), cudaMemcpyHostToDevice));
 		qint64 elapsed_time_memcpy = performanceTimer.nsecsElapsed();
 
 		printf("[CPU] BRUSH APPLY TIME: brush_basic(w=%d, h=%d, mx=%d, my=%d, brushSettings=...): %.6f ms\n", width, height, lastPos.x(),
