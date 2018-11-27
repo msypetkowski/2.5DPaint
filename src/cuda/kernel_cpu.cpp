@@ -1,9 +1,7 @@
 #include "kernel_cpu.h"
 #include <QtMath>
 #include <QVector3D>
-
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <QImage>
 
 qreal normal_from_delta(qreal dx) {
 	return dx / qSqrt(dx * dx + 1);
@@ -32,9 +30,9 @@ Color interpolate_color(Color oldColor, qreal strength, const Color& newColor) {
 }
 
 
-std::pair<int, int> get_coords(cv::Mat image, int x, int y, int w, int h) {
-	const auto pixel_x = int(x / float(w) * image.cols);
-	const auto pixel_y = int(y / float(w) * image.rows);
+std::pair<int, int> get_coords(const QImage& image, int x, int y, int w, int h) {
+	const auto pixel_x = int(x / float(w) * image.width());
+	const auto pixel_y = int(y / float(w) * image.height());
 	return { pixel_x, pixel_y };
 }
 
@@ -176,15 +174,8 @@ void CPUPainter::updatePainted(int mx, int my) {
 void CPUPainter::brushTextured(int mx, int my) {
 	qreal maxRadius = brushSettings.size/2;
 	//TODO(Konrad): Un-hard-code this
-#ifdef __linux__
-	static const auto color_image = cv::imread("textures/colors.jpg", cv::IMREAD_COLOR);
-	static const auto height_image = cv::imread("textures/RocksDistortion.png", cv::IMREAD_COLOR);
-#else
-	static const auto color_image = cv::imread("textures\\colors.jpg", cv::IMREAD_COLOR);
-	static const auto height_image = cv::imread("textures\\RocksDistortion.png", cv::IMREAD_COLOR);
-#endif
-	assert(color_image.data);
-	assert(height_image.data);
+	static const auto color_image = QImage("textures\\colors.jpg");
+	static const auto height_image = QImage("textures\\RocksDistortion.png");
 	for (int x=mx - maxRadius + 1 ; x < mx + maxRadius; ++x) {
 		for (int y=my - maxRadius + 1 ; y < my + maxRadius; ++y) {
 			if (!inBounds(x,y))
@@ -198,15 +189,15 @@ void CPUPainter::brushTextured(int mx, int my) {
 			qreal strength = brushSettings.pressure * cosine_fallof(radius / maxRadius, brushSettings.falloff);
 			const auto color_coords = 
 				get_coords(color_image, x-mx+maxRadius, y-my+maxRadius, maxRadius * 2, maxRadius * 2);
-			const auto color = color_image.at<cv::Vec3b>(color_coords.second, color_coords.first);
+			const auto pixel = color_image.pixel(color_coords.first, color_coords.second);
 			cpuBufferColor[i] = interpolate_color(
 				cpuBufferColor[i],
 				strength,
-				Color(color[2], color[1], color[0]));
+				Color(qRed(pixel), qGreen(pixel), qBlue(pixel)));
 
 			const auto height_coords = 
 				get_coords(height_image, x-mx+maxRadius, y-my+maxRadius, maxRadius * 2, maxRadius * 2);
-			const auto height = height_image.at<unsigned char>(height_coords.second, height_coords.first) * 0.001f;
+			const auto height = qRed(height_image.pixel(height_coords.first, height_coords.second)) * 0.001f;
 			strength = brushSettings.heightPressure * height * cosine_fallof(radius / maxRadius, brushSettings.falloff);
 			cpuBufferHeight[i] = qBound(-1.0, cpuBufferHeight[i] + strength, 1.0);
 		}
