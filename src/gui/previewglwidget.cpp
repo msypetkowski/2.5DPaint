@@ -3,6 +3,7 @@
 #include "helper_cuda.h"
 
 #include <QMouseEvent>
+#include <functional>
 
 #include "kernel.h"
 #include "mainwindow.h"
@@ -282,8 +283,7 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event)
 		}
 
 		performanceTimer.restart();
-		cpuPainter.setBrush(brushSettings);
-		cpuPainter.brushBasic(lastPos.x(), lastPos.y());
+		cpuPainter.paint(lastPos.x(), lastPos.y());
 		qint64 elapsed_time = performanceTimer.nsecsElapsed();
 
 		performanceTimer.restart();
@@ -297,4 +297,22 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event)
 	update();
 
 	printf("PreviewGLWidget::mouseMoveEvent(): %dx%d (dx:=%d, dy=%d)\n", event->x(), event->y(), dx, dy);
+}
+
+void PreviewGLWidget::setBrushType(BrushType type) {
+	using namespace std::placeholders;
+	switch (type) {
+		case BrushType::Default:
+			cpuPainter.paint = std::bind(&CPUPainter::brushBasic, &cpuPainter, _1, _2);
+			break;
+		case BrushType::Textured:
+			cpuPainter.paint = std::bind(&CPUPainter::brushTextured, &cpuPainter, _1, _2);
+			break;
+		case BrushType::Third:
+			printf("Warning: chose unused brush\n");
+			break;
+		default:
+			throw std::runtime_error("Invalid brush type: " 
+									 + std::to_string(static_cast<int>(type)));
+	}
 }

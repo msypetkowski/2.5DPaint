@@ -19,6 +19,7 @@ public:
 
 public slots:
 	void updateSettings();
+	void updateBrushType();
 
 private:
     Ui::MainWindow *ui;

@@ -2,8 +2,8 @@
 #include <QtMath>
 #include <QVector3D>
 
-// TODO: make class not globals
-
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 qreal normal_from_delta(qreal dx) {
 	return dx / qSqrt(dx * dx + 1);
@@ -152,7 +152,11 @@ void CPUPainter::brushBasic(int mx, int my) {
 			cpuBufferHeight[i] = qBound(-1.0, cpuBufferHeight[i] + strength, 1.0);
 		}
 	}
+	updatePainted(mx, my);
+}
 
+void CPUPainter::updatePainted(int mx, int my) {
+	qreal maxRadius = brushSettings.size/2;
 	for (int x=mx - maxRadius + 1 ; x < mx + maxRadius; ++x) {
 		for (int y=my - maxRadius + 1 ; y < my + maxRadius; ++y) {
 			if (!inBounds(x,y))
@@ -160,4 +164,26 @@ void CPUPainter::brushBasic(int mx, int my) {
 			updateDisplay(x,y);
 		}
 	}
+}
+
+void CPUPainter::brushTextured(int mx, int my) {
+	qreal maxRadius = brushSettings.size/2;
+	static const auto color_image = cv::imread("/c/Users/Memotosz/Pictures/a.jpg", cv::IMREAD_COLOR);
+	assert(color_image.data);
+	for (int x=mx - maxRadius + 1 ; x < mx + maxRadius; ++x) {
+		for (int y=my - maxRadius + 1 ; y < my + maxRadius; ++y) {
+			if (!inBounds(x,y))
+				continue;
+			qreal radius = qSqrt((x-mx) * (x-mx) + (y-my) * (y-my));
+			if (radius > maxRadius) {
+				continue;
+			}
+			int	i = getBufferIndex(x,y);
+
+			cpuBufferColor[i] = brushSettings.color;
+
+			cpuBufferHeight[i] = 0;
+		}
+	}
+	updatePainted(mx, my);
 }

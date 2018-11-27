@@ -10,6 +10,7 @@
 #include <QtCore/QElapsedTimer>
 
 #include "../brush.h"
+#include "../brush_type.h"
 #include "kernel_cpu.h"
 
 class PreviewGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
@@ -22,7 +23,10 @@ public:
 	QString getGLinfo();
 	void reloadTexture(int, int);
 
-	void setBrushSettings(const BrushSettings& bs) { brushSettings = bs; }
+	void setBrushSettings(const BrushSettings& bs) {
+		cpuPainter.setBrush(bs);
+	}
+	void setBrushType(BrushType type);
 
 protected:
     void initializeGL() override;
