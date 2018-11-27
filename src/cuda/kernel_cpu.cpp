@@ -176,8 +176,13 @@ void CPUPainter::updatePainted(int mx, int my) {
 void CPUPainter::brushTextured(int mx, int my) {
 	qreal maxRadius = brushSettings.size/2;
 	//TODO(Konrad): Un-hard-code this
+#ifdef __linux__
+	static const auto color_image = cv::imread("textures/colors.jpg", cv::IMREAD_COLOR);
+	static const auto height_image = cv::imread("textures/RocksDistortion.png", cv::IMREAD_COLOR);
+#else
 	static const auto color_image = cv::imread("textures\\colors.jpg", cv::IMREAD_COLOR);
 	static const auto height_image = cv::imread("textures\\RocksDistortion.png", cv::IMREAD_COLOR);
+#endif
 	assert(color_image.data);
 	assert(height_image.data);
 	for (int x=mx - maxRadius + 1 ; x < mx + maxRadius; ++x) {
