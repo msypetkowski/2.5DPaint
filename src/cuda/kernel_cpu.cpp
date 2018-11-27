@@ -24,11 +24,18 @@ qreal cosine_fallof(qreal val, qreal falloff) {
 	return (qCos(val  * M_PI) + 1) * 0.5;
 }
 
-Color interpolate_color(Color inputColor, qreal strength, const BrushSettings& bs) {
+Color interpolate_color(Color oldColor, qreal strength, const Color& newColor) {
 	Color ret;
-	ret = lerp(inputColor, bs.color, strength);
+	ret = lerp(oldColor, newColor, strength);
 	ret = qBound(Color(0,0,0), ret, Color(255,255,255));
 	return ret;
+}
+
+
+std::pair<int, int> get_coords(cv::Mat image, int x, int y, int w, int h) {
+	const auto pixel_x = int(x / float(w) * image.cols);
+	const auto pixel_y = int(y / float(w) * image.rows);
+	return { pixel_x, pixel_y };
 }
 
 int CPUPainter::getBufferIndex(int x, int y) {
@@ -145,7 +152,7 @@ void CPUPainter::brushBasic(int mx, int my) {
 
 			// paint color
 			qreal strength = brushSettings.pressure * cosine_fallof(radius / maxRadius, brushSettings.falloff);
-			cpuBufferColor[i] = interpolate_color(cpuBufferColor[i], strength, brushSettings);
+			cpuBufferColor[i] = interpolate_color(cpuBufferColor[i], strength, brushSettings.color);
 
 			// paint height
 			strength = brushSettings.heightPressure * cosine_fallof(radius / maxRadius, brushSettings.falloff);
@@ -168,8 +175,11 @@ void CPUPainter::updatePainted(int mx, int my) {
 
 void CPUPainter::brushTextured(int mx, int my) {
 	qreal maxRadius = brushSettings.size/2;
-	static const auto color_image = cv::imread("/c/Users/Memotosz/Pictures/a.jpg", cv::IMREAD_COLOR);
+	//TODO(Konrad): Un-hard-code this
+	static const auto color_image = cv::imread("textures\\colors.jpg", cv::IMREAD_COLOR);
+	static const auto height_image = cv::imread("textures\\RocksDistortion.png", cv::IMREAD_COLOR);
 	assert(color_image.data);
+	assert(height_image.data);
 	for (int x=mx - maxRadius + 1 ; x < mx + maxRadius; ++x) {
 		for (int y=my - maxRadius + 1 ; y < my + maxRadius; ++y) {
 			if (!inBounds(x,y))
@@ -180,9 +190,20 @@ void CPUPainter::brushTextured(int mx, int my) {
 			}
 			int	i = getBufferIndex(x,y);
 
-			cpuBufferColor[i] = brushSettings.color;
+			qreal strength = brushSettings.pressure * cosine_fallof(radius / maxRadius, brushSettings.falloff);
+			const auto color_coords = 
+				get_coords(color_image, x-mx+maxRadius, y-my+maxRadius, maxRadius * 2, maxRadius * 2);
+			const auto color = color_image.at<cv::Vec3b>(color_coords.second, color_coords.first);
+			cpuBufferColor[i] = interpolate_color(
+				cpuBufferColor[i],
+				strength,
+				Color(color[2], color[1], color[0]));
 
-			cpuBufferHeight[i] = 0;
+			const auto height_coords = 
+				get_coords(height_image, x-mx+maxRadius, y-my+maxRadius, maxRadius * 2, maxRadius * 2);
+			const auto height = height_image.at<unsigned char>(height_coords.second, height_coords.first) * 0.001f;
+			strength = brushSettings.heightPressure * height * cosine_fallof(radius / maxRadius, brushSettings.falloff);
+			cpuBufferHeight[i] = qBound(-1.0, cpuBufferHeight[i] + strength, 1.0);
 		}
 	}
 	updatePainted(mx, my);

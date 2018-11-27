@@ -99,7 +99,8 @@ endif()
 # Tell CMake to create the helloworld executable
 cuda_add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SRCS})
 # Use the Widgets module from Qt 5
-target_link_libraries(${CMAKE_PROJECT_NAME} Qt5::Widgets ${OpenCV_LIBS})
+# TODO(Konrad): Propably find a way that won't break everybody's builds
+target_link_libraries(${CMAKE_PROJECT_NAME} Qt5::Widgets ${OpenCV_LIBS} "C:\\Users\\Memotosz\\Libs\\opencv\\build\\x64\\vc15\\lib\\opencv_world343.lib")
 
 # additional actions
 if(WIN32 OR WIN64)
