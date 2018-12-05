@@ -316,3 +316,7 @@ void PreviewGLWidget::setBrushType(BrushType type) {
 									 + std::to_string(static_cast<int>(type)));
 	}
 }
+
+void PreviewGLWidget::setTexture(QString type, QString file) {
+	cpuPainter.setTexture(type, file);
+}

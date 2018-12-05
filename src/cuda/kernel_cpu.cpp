@@ -1,7 +1,6 @@
 #include "kernel_cpu.h"
 #include <QtMath>
 #include <QVector3D>
-#include <QImage>
 
 qreal normal_from_delta(qreal dx) {
 	return dx / qSqrt(dx * dx + 1);
@@ -173,9 +172,6 @@ void CPUPainter::updatePainted(int mx, int my) {
 
 void CPUPainter::brushTextured(int mx, int my) {
 	qreal maxRadius = brushSettings.size/2;
-	//TODO(Konrad): Un-hard-code this
-	static const auto color_image = QImage("textures\\colors.jpg");
-	static const auto height_image = QImage("textures\\RocksDistortion.png");
 	for (int x=mx - maxRadius + 1 ; x < mx + maxRadius; ++x) {
 		for (int y=my - maxRadius + 1 ; y < my + maxRadius; ++y) {
 			if (!inBounds(x,y))
@@ -203,4 +199,12 @@ void CPUPainter::brushTextured(int mx, int my) {
 		}
 	}
 	updatePainted(mx, my);
+}
+
+void CPUPainter::setTexture(QString type, QString path) {
+	if (type == "colorFilename") {
+		color_image = QImage(path);
+	} else {
+		height_image = QImage(path);
+	}
 }

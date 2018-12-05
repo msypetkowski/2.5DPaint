@@ -2,6 +2,8 @@
 #include "ui_mainwindow.h"
 #include "../brush_type.h"
 
+#include <QFileDialog>
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -27,6 +29,9 @@ MainWindow::MainWindow(QWidget *parent) :
 	assert(connect(ui->texturedBrush, SIGNAL(clicked(bool)), this, SLOT(updateBrushType())));
 	assert(connect(ui->radioButton_3, SIGNAL(clicked(bool)), this, SLOT(updateBrushType())));
 
+	assert(connect(ui->colorChooseButton, SIGNAL(clicked(bool)), this, SLOT(setColorTexture())));
+	assert(connect(ui->heightChooseButton, SIGNAL(clicked(bool)), this, SLOT(setHeightTexture())));
+
 	updateSettings();
 	updateBrushType();
 }
@@ -35,8 +40,6 @@ MainWindow::~MainWindow()
 {
 	delete ui;
 }
-
-#include <iostream>
 
 void MainWindow::updateSettings()
 {
@@ -52,11 +55,29 @@ void MainWindow::updateSettings()
 	ui->openGLWidget->setBrushSettings(brushSettings);
 }
 
-void MainWindow::updateBrushType() 
+void MainWindow::updateBrushType()
 {
 	const auto brush_id = ui->defaultBrush->isChecked() 
 		+ (ui->texturedBrush->isChecked() << 1) 
 	    + (ui->radioButton_3->isChecked() << 2);
 	ui->openGLWidget->setBrushType(static_cast<BrushType>(brush_id));
 
+}
+
+void MainWindow::setColorTexture()
+{
+	browseFilesFor(ui->colorFilename);
+}
+
+void MainWindow::setHeightTexture()
+{
+	browseFilesFor(ui->heightFilename);
+}
+
+void MainWindow::browseFilesFor(QLabel *what)
+{
+    const auto file = QFileDialog::getOpenFileName(this, tr("Choose Texture"), QDir::currentPath());
+	const auto filename = QFileInfo(file).fileName();
+	what->setText("Chosen texture: " + filename);
+	ui->openGLWidget->setTexture(what->objectName(), file);
 }

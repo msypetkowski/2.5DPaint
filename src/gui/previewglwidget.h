@@ -27,6 +27,7 @@ public:
 		cpuPainter.setBrush(bs);
 	}
 	void setBrushType(BrushType type);
+	void setTexture(QString type, QString file);
 
 protected:
     void initializeGL() override;

@@ -4,6 +4,7 @@
 #include <functional>
 #include <QVector>
 #include <QColor>
+#include <QImage>
 
 #include "../brush.h"
 
@@ -25,6 +26,8 @@ public:
 
 	void* getBufferPtr() { return &cpuBuffer[0]; }
 
+	void setTexture(QString type, QString path);
+
 	std::function<void(int, int)> paint;
 private:
 	int getBufferIndex(int x, int y);
@@ -43,5 +46,7 @@ private:
 	QVector<qreal> cpuBufferHeight;
 
 	BrushSettings brushSettings;
+	QImage color_image = QImage();
+	QImage height_image = QImage();
 	int w, h;
 };
