@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <QImage>
+#include <QtCore/QElapsedTimer>
 
 #include "../brush_settings.h"
 #include "../brush_type.h"
@@ -16,13 +17,15 @@ public:
 	int getHeight() { return h; }
 
 	void setTexture(QString type, QString path);
+	void paint(int x, int y, uchar4 *pbo);
 
 	virtual void setDimensions(int w, int h) = 0;
-	virtual void *getBufferPtr() = 0;
-	virtual void paint(int x, int y) = 0;
 	virtual void setBrushType(BrushType type) = 0;
 
 	static std::unique_ptr<Painter> make_painter(bool is_gpu);
+private:
+	virtual void doPainting(int x, int y, uchar4 *pbo) = 0;
+
 protected:
 	BrushSettings brushSettings;
 

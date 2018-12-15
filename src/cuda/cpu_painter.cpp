@@ -5,6 +5,8 @@
 #include <QtMath>
 #include <QVector3D>
 
+#include "helper_cuda.h"
+
 qreal normal_from_delta(qreal dx) {
 	return dx / qSqrt(dx * dx + 1);
 }
@@ -226,6 +228,23 @@ void CPUPainter::setBrushType(BrushType type) {
 	}
 }
 
-void CPUPainter::paint(int x, int y) {
+void CPUPainter::doPainting(int x, int y, uchar4 *pbo) {
+    QElapsedTimer performanceTimer;
+	const auto buf_size = w * h * sizeof(uchar4);
+
+	//TODO: leaving it here, this logic used to be in previewGLWidget, although I don't know why
+	//performanceTimer.restart();
+	//checkCudaErrors(cudaMemcpy(&buffer[0], pbo, buf_size, cudaMemcpyDeviceToHost));
+	//const auto memcpy_d2h = performanceTimer.nsecsElapsed();
+
+	performanceTimer.restart();
 	paint_function(x, y);
+	const auto painting_duration = performanceTimer.nsecsElapsed();
+
+	performanceTimer.restart();
+	checkCudaErrors(cudaMemcpy(pbo, &buffer[0], buf_size, cudaMemcpyHostToDevice));
+	const auto memcpy_h2d = performanceTimer.nsecsElapsed();
+
+	std::clog << "Painting: " << painting_duration/1e6f << "ms\n";
+	std::clog << "Copying: " << memcpy_h2d/1e6f << "ms\n";
 }

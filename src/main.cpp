@@ -1,6 +1,6 @@
 #include "mainwindow.h"
 #include <QApplication>
-#include "kernel.h"
+#include "gpu_painter.h"
 
 int main(int argc, char *argv[])
 {

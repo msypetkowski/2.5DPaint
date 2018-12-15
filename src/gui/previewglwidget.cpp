@@ -2,38 +2,14 @@
 #include "cuda_gl_interop.h"
 #include "helper_cuda.h"
 
+#include <iostream>
+
 #include <QMouseEvent>
 #include <functional>
 
-#include "kernel.h"
 #include "mainwindow.h"
-
+#include "gpu_painter.h"
 #include "cpu_painter.h"
-
-// shader programs
-/*const char* shaderVertDefault = "	\
-	#version 330 core				\
-									\
-	in vec4 Position;				\
-	in vec2 Texcoords;				\
-	out vec2 v_Texcoords;			\
-									\
-	void main(void) {				\
-		v_Texcoords = Texcoords;	\
-		gl_Position = Position;		\
-	}								\
-";									
-
-const char* shaderFragDefault = "						\
-	#version 330 core									\
-														\
-	in vec2 v_Texcoords;								\
-	uniform sampler2D u_image;							\
-														\
-	void main(void) {									\
-		gl_FragColor = texture2D(u_image, v_Texcoords);	\
-	}													\
-";*/
 
 // cuda pbo image resource
 static cudaGraphicsResource* viewPBO_cuda;
@@ -252,42 +228,22 @@ void PreviewGLWidget::mouseReleaseEvent(QMouseEvent * event)
 	printf("PreviewGLWidget::mouseReleaseEvent(): %dx%d\n", xAtRelease, yAtRelease);
 }
 
-void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event)
-{
+void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event) {
 	int dx = event->x() - lastPos.x();
 	int dy = event->y() - lastPos.y();
 
-	/*if (event->buttons() & Qt::LeftButton) {
-
-	}
-	else if (event->buttons() & Qt::RightButton) {
-
-	}*/
 	lastPos = event->pos();
 
-	assert(pbo_dptr);
 	int buf_size = width * height;
 	if (painter->getWidth() != width || painter->getHeight() != height) {
 		painter->setDimensions(width, height);
-	} else {
-		// TODO: this may be not needed if not used together with GPU
-		checkCudaErrors(cudaMemcpy(painter->getBufferPtr(), pbo_dptr, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
 	}
 
-	performanceTimer.restart();
-	painter->paint(lastPos.x(), lastPos.y());
-	qint64 elapsed_time = performanceTimer.nsecsElapsed();
+	std::clog << "BRUSH: w=" << width << ", h=" << height << ", mx=" << lastPos.x() << ", my=" << lastPos.y() << "\n";
+	assert(pbo_dptr);
+	painter->paint(lastPos.x(), lastPos.y(), pbo_dptr);
 
-	performanceTimer.restart();
-	checkCudaErrors(cudaMemcpy(pbo_dptr, painter->getBufferPtr(), buf_size * sizeof(uchar4), cudaMemcpyHostToDevice));
-	qint64 elapsed_time_memcpy = performanceTimer.nsecsElapsed();
-
-	printf("[CPU] BRUSH APPLY TIME: brush_basic(w=%d, h=%d, mx=%d, my=%d, brushSettings=...): %.6f ms\n", width, height, lastPos.x(),
-		   lastPos.y(), (float)elapsed_time / 1000000.0f);
-	printf("[CPU] COPY BUFFER TO RENDER TIME: cudaMemcpy(pbo_dptr, &cpu_buffer[0], buf_size * sizeof(uchar4), cudaMemcpyHostToDevice): %.6f ms\n", (float)elapsed_time_memcpy / 1000000.0f);
 	update();
-
-	printf("PreviewGLWidget::mouseMoveEvent(): %dx%d (dx:=%d, dy=%d)\n", event->x(), event->y(), dx, dy);
 }
 
 void PreviewGLWidget::setBrushType(BrushType type) {

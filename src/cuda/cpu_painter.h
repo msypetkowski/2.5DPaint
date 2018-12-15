@@ -16,16 +16,12 @@ public:
 	~CPUPainter() override {}
 
 	void setDimensions(int w, int h) override;
+	void setBrushType(BrushType type) override;
 
 	void updateWholeDisplay();
 	void brushBasic(int mx, int my);
 	void brushTextured(int mx, int my);
 
-	void* getBufferPtr() override { return &buffer[0]; }
-
-	void setBrushType(BrushType type) override;
-
-	void paint(int x, int y) override;
 private:
 	int getBufferIndex(int x, int y);
 	bool inBounds(int x, int y);
@@ -34,6 +30,8 @@ private:
 
 	void updateDisplay(int x, int y);
 	void updatePainted(int mx, int my);
+
+	void doPainting(int x, int y, uchar4 *pbo) override;
 
 	// buffer for display information
 	QVector<uchar4> buffer;

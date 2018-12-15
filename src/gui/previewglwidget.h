@@ -7,7 +7,6 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
-#include <QtCore/QElapsedTimer>
 
 #include "../brush_settings.h"
 #include "../brush_type.h"
@@ -43,6 +42,7 @@ private:
 	QOpenGLBuffer* m_indices;
 
 	QOpenGLBuffer* m_pbo;
+	uchar4 *pbo_dptr;
 
     QOpenGLShaderProgram m_program;
     QOpenGLTexture *m_texture;
@@ -61,7 +61,6 @@ private:
 
 	BrushSettings brushSettings;
 
-    QElapsedTimer performanceTimer;
 
 	std::unique_ptr<Painter> painter;
 

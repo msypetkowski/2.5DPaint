@@ -69,7 +69,7 @@ set(CMAKE_CXX_STANDARD 11)
 list(APPEND CUDA_NVCC_FLAGS_DEBUG -G -g)
 
 # Specify CUDA nvcc flags
-list(APPEND CUDA_NVCC_FLAGS -arch=sm_35)
+list(APPEND CUDA_NVCC_FLAGS -arch=sm_35 "-I${QT_PATH}/include/QtGui" "-I${QT_PATH}/include/QtCore" "-I${QT_PATH}/include/")
 
 # Linux-specific hacks/fixes
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
