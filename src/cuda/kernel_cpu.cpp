@@ -1,4 +1,7 @@
 #include "kernel_cpu.h"
+
+#include <iostream>
+
 #include <QtMath>
 #include <QVector3D>
 
@@ -172,6 +175,10 @@ void CPUPainter::updatePainted(int mx, int my) {
 
 void CPUPainter::brushTextured(int mx, int my) {
 	qreal maxRadius = brushSettings.size/2;
+	if (color_image.isNull() || height_image.isNull()) {
+		std::clog << "No texture set";
+		return;
+	}
 	for (int x=mx - maxRadius + 1 ; x < mx + maxRadius; ++x) {
 		for (int y=my - maxRadius + 1 ; y < my + maxRadius; ++y) {
 			if (!inBounds(x,y))
