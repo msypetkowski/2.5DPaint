@@ -1,4 +1,4 @@
-#include "kernel_cpu.h"
+#include "cpu_painter.h"
 
 #include <iostream>
 
@@ -50,7 +50,7 @@ bool CPUPainter::inBounds(int x, int y) {
 qreal CPUPainter::sampleHeight(int x, int y) {
 	x = qBound(0, x, w-1);
 	y = qBound(0, y, h-1);
-	return cpuBufferHeight[getBufferIndex(x,y)];
+	return bufferHeight[getBufferIndex(x,y)];
 }
 
 
@@ -99,7 +99,7 @@ void CPUPainter::updateDisplay(int x, int y) {
 	specular = qPow(specular, 8);
 	specular = qBound(0.0, specular, 1.0);
 
-	Color color = cpuBufferColor[i];
+	Color color = bufferColor[i];
 	color = lerp(color * shadow, Color(255, 255, 255), specular);
 
 	// view normals (TODO: remove or make normals visualization feature)
@@ -107,7 +107,7 @@ void CPUPainter::updateDisplay(int x, int y) {
 	// color.y = normal.y()*255.0/2 + 255.0/2;
 	// color.z = normal.z()*255;
 
-	cpuBuffer[i] = color.getAsUchar4();
+	buffer[i] = color.getAsUchar4();
 }
 
 void CPUPainter::updateWholeDisplay() {
@@ -126,13 +126,13 @@ void CPUPainter::setDimensions(int w1, int h1)
 	int buf_size = w * h;
 
 	printf("init/resize cpu buffers (%d, %d)\n", w, h);
-	cpuBuffer.resize(buf_size);
-	cpuBufferColor.resize(buf_size);
-	cpuBufferHeight.resize(buf_size);
+	buffer.resize(buf_size);
+	bufferColor.resize(buf_size);
+	bufferHeight.resize(buf_size);
 
 	Color fill(125, 125, 125);
-	cpuBufferColor.fill(fill);
-	cpuBufferHeight.fill(0.0);
+	bufferColor.fill(fill);
+	bufferHeight.fill(0.0);
 	// cpu_buffer.fill(fill);
 	updateWholeDisplay();
 }
@@ -152,11 +152,11 @@ void CPUPainter::brushBasic(int mx, int my) {
 
 			// paint color
 			qreal strength = brushSettings.pressure * cosine_fallof(radius / maxRadius, brushSettings.falloff);
-			cpuBufferColor[i] = interpolate_color(cpuBufferColor[i], strength, brushSettings.color);
+			bufferColor[i] = interpolate_color(bufferColor[i], strength, brushSettings.color);
 
 			// paint height
 			strength = brushSettings.heightPressure * cosine_fallof(radius / maxRadius, brushSettings.falloff);
-			cpuBufferHeight[i] = qBound(-1.0, cpuBufferHeight[i] + strength, 1.0);
+			bufferHeight[i] = qBound(-1.0, bufferHeight[i] + strength, 1.0);
 		}
 	}
 	updatePainted(mx, my);
@@ -176,7 +176,7 @@ void CPUPainter::updatePainted(int mx, int my) {
 void CPUPainter::brushTextured(int mx, int my) {
 	qreal maxRadius = brushSettings.size/2;
 	if (color_image.isNull() || height_image.isNull()) {
-		std::clog << "No texture set";
+		std::clog << "No texture set\n";
 		return;
 	}
 	for (int x=mx - maxRadius + 1 ; x < mx + maxRadius; ++x) {
@@ -193,8 +193,8 @@ void CPUPainter::brushTextured(int mx, int my) {
 			const auto color_coords = 
 				get_coords(color_image, x-mx+maxRadius, y-my+maxRadius, maxRadius * 2, maxRadius * 2);
 			const auto pixel = color_image.pixel(color_coords.first, color_coords.second);
-			cpuBufferColor[i] = interpolate_color(
-				cpuBufferColor[i],
+			bufferColor[i] = interpolate_color(
+				bufferColor[i],
 				strength,
 				Color(qRed(pixel), qGreen(pixel), qBlue(pixel)));
 
@@ -202,16 +202,30 @@ void CPUPainter::brushTextured(int mx, int my) {
 				get_coords(height_image, x-mx+maxRadius, y-my+maxRadius, maxRadius * 2, maxRadius * 2);
 			const auto height = qRed(height_image.pixel(height_coords.first, height_coords.second)) * 0.001f;
 			strength = brushSettings.heightPressure * height * cosine_fallof(radius / maxRadius, brushSettings.falloff);
-			cpuBufferHeight[i] = qBound(-1.0, cpuBufferHeight[i] + strength, 1.0);
+			bufferHeight[i] = qBound(-1.0, bufferHeight[i] + strength, 1.0);
 		}
 	}
 	updatePainted(mx, my);
 }
 
-void CPUPainter::setTexture(QString type, QString path) {
-	if (type == "colorFilename") {
-		color_image = QImage(path);
-	} else {
-		height_image = QImage(path);
+void CPUPainter::setBrushType(BrushType type) {
+	using namespace std::placeholders;
+	switch (type) {
+		case BrushType::Default:
+			paint_function = std::bind(&CPUPainter::brushBasic, this, _1, _2);
+			break;
+		case BrushType::Textured:
+			paint_function = std::bind(&CPUPainter::brushTextured, this, _1, _2);
+			break;
+		case BrushType::Third:
+			std::clog << "Warning: chose unused brush\n";
+			break;
+		default:
+			throw std::runtime_error("Invalid brush type: "
+									 + std::to_string(static_cast<int>(type)));
 	}
+}
+
+void CPUPainter::paint(int x, int y) {
+	paint_function(x, y);
 }

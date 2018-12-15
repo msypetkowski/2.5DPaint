@@ -6,29 +6,26 @@
 #include <QColor>
 #include <QImage>
 
-#include "../brush.h"
+#include "../brush_settings.h"
+#include "../brush_type.h"
+#include "painter.h"
 
-
-
-class CPUPainter {
+class CPUPainter : public Painter {
 public:
 	CPUPainter() {}
+	~CPUPainter() override {}
 
-	void setDimensions(int w, int h);
-	void setBrush(const BrushSettings& bs) { brushSettings = bs; }
+	void setDimensions(int w, int h) override;
 
 	void updateWholeDisplay();
 	void brushBasic(int mx, int my);
 	void brushTextured(int mx, int my);
 
-	int getWidth() { return w; }
-	int getHeight() { return h; }
+	void* getBufferPtr() override { return &buffer[0]; }
 
-	void* getBufferPtr() { return &cpuBuffer[0]; }
+	void setBrushType(BrushType type) override;
 
-	void setTexture(QString type, QString path);
-
-	std::function<void(int, int)> paint;
+	void paint(int x, int y) override;
 private:
 	int getBufferIndex(int x, int y);
 	bool inBounds(int x, int y);
@@ -39,14 +36,11 @@ private:
 	void updatePainted(int mx, int my);
 
 	// buffer for display information
-	QVector<uchar4> cpuBuffer;
+	QVector<uchar4> buffer;
 
 	// internal representation buffers
-	QVector<Color> cpuBufferColor;
-	QVector<qreal> cpuBufferHeight;
+	QVector<Color> bufferColor;
+	QVector<qreal> bufferHeight;
 
-	BrushSettings brushSettings;
-	QImage color_image = QImage();
-	QImage height_image = QImage();
-	int w, h;
+	std::function<void(int, int)> paint_function;
 };

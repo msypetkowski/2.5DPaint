@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 
-#include "../brush.h"
+#include "../brush_settings.h"
 
 namespace Ui {
 class MainWindow;

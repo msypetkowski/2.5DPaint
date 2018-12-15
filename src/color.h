@@ -1,4 +1,5 @@
 #pragma once
+
 #include <QtGlobal>
 #include <QVector3D>
 
@@ -25,13 +26,4 @@ public:
 	bool operator<(const Color& c)const { return std::tuple<int, int, int>(x,y,z) < std::tuple<int, int, int>(c.x,c.y,c.z); }
 
 	int x, y, z;
-};
-
-
-struct BrushSettings {
-	qreal pressure;
-	qreal heightPressure;
-	qreal size;
-	qreal falloff;
-	Color color;
 };

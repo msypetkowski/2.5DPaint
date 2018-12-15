@@ -8,7 +8,7 @@
 #include "kernel.h"
 #include "mainwindow.h"
 
-#include "kernel_cpu.h"
+#include "cpu_painter.h"
 
 // shader programs
 /*const char* shaderVertDefault = "	\
@@ -265,58 +265,39 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event)
 	}*/
 	lastPos = event->pos();
 
-	if (cudaEnabled) {
-		performanceTimer.restart();
-		cuda_main(width, height, lastPos.x(), lastPos.y());
-		qint64 elapsed_time = performanceTimer.nsecsElapsed();
-
-		printf("[CUDA GPU] BRUSH APPLY TIME: cuda_main(w=%d, h=%d, mx=%d, my=%d): %.6f ms\n", width, height, lastPos.x(),
-			   lastPos.y(), (float)elapsed_time / 1000000.0f);
+	assert(pbo_dptr);
+	int buf_size = width * height;
+	if (painter->getWidth() != width || painter->getHeight() != height) {
+		painter->setDimensions(width, height);
 	} else {
-		assert(pbo_dptr);
-		int buf_size = width * height;
-		if (cpuPainter.getWidth() != width || cpuPainter.getHeight() != height) {
-			cpuPainter.setDimensions(width, height);
-		} else {
-			// TODO: this may be not needed if not used together with GPU
-			checkCudaErrors(cudaMemcpy(cpuPainter.getBufferPtr(), pbo_dptr, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
-		}
-
-		performanceTimer.restart();
-		cpuPainter.paint(lastPos.x(), lastPos.y());
-		qint64 elapsed_time = performanceTimer.nsecsElapsed();
-
-		performanceTimer.restart();
-		checkCudaErrors(cudaMemcpy(pbo_dptr, cpuPainter.getBufferPtr(), buf_size * sizeof(uchar4), cudaMemcpyHostToDevice));
-		qint64 elapsed_time_memcpy = performanceTimer.nsecsElapsed();
-
-		printf("[CPU] BRUSH APPLY TIME: brush_basic(w=%d, h=%d, mx=%d, my=%d, brushSettings=...): %.6f ms\n", width, height, lastPos.x(),
-			   lastPos.y(), (float)elapsed_time / 1000000.0f);
-		printf("[CPU] COPY BUFFER TO RENDER TIME: cudaMemcpy(pbo_dptr, &cpu_buffer[0], buf_size * sizeof(uchar4), cudaMemcpyHostToDevice): %.6f ms\n", (float)elapsed_time_memcpy / 1000000.0f);
+		// TODO: this may be not needed if not used together with GPU
+		checkCudaErrors(cudaMemcpy(painter->getBufferPtr(), pbo_dptr, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
 	}
+
+	performanceTimer.restart();
+	painter->paint(lastPos.x(), lastPos.y());
+	qint64 elapsed_time = performanceTimer.nsecsElapsed();
+
+	performanceTimer.restart();
+	checkCudaErrors(cudaMemcpy(pbo_dptr, painter->getBufferPtr(), buf_size * sizeof(uchar4), cudaMemcpyHostToDevice));
+	qint64 elapsed_time_memcpy = performanceTimer.nsecsElapsed();
+
+	printf("[CPU] BRUSH APPLY TIME: brush_basic(w=%d, h=%d, mx=%d, my=%d, brushSettings=...): %.6f ms\n", width, height, lastPos.x(),
+		   lastPos.y(), (float)elapsed_time / 1000000.0f);
+	printf("[CPU] COPY BUFFER TO RENDER TIME: cudaMemcpy(pbo_dptr, &cpu_buffer[0], buf_size * sizeof(uchar4), cudaMemcpyHostToDevice): %.6f ms\n", (float)elapsed_time_memcpy / 1000000.0f);
 	update();
 
 	printf("PreviewGLWidget::mouseMoveEvent(): %dx%d (dx:=%d, dy=%d)\n", event->x(), event->y(), dx, dy);
 }
 
 void PreviewGLWidget::setBrushType(BrushType type) {
-	using namespace std::placeholders;
-	switch (type) {
-		case BrushType::Default:
-			cpuPainter.paint = std::bind(&CPUPainter::brushBasic, &cpuPainter, _1, _2);
-			break;
-		case BrushType::Textured:
-			cpuPainter.paint = std::bind(&CPUPainter::brushTextured, &cpuPainter, _1, _2);
-			break;
-		case BrushType::Third:
-			printf("Warning: chose unused brush\n");
-			break;
-		default:
-			throw std::runtime_error("Invalid brush type: " 
-									 + std::to_string(static_cast<int>(type)));
-	}
+	painter->setBrushType(type);
 }
 
 void PreviewGLWidget::setTexture(QString type, QString file) {
-	cpuPainter.setTexture(type, file);
+	painter->setTexture(type, file);
+}
+
+void PreviewGLWidget::enableCUDA(bool enable) {
+	painter = Painter::make_painter(enable);
 }

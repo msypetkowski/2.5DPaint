@@ -61,7 +61,6 @@ void MainWindow::updateBrushType()
 		+ (ui->texturedBrush->isChecked() << 1) 
 	    + (ui->radioButton_3->isChecked() << 2);
 	ui->openGLWidget->setBrushType(static_cast<BrushType>(brush_id));
-
 }
 
 void MainWindow::setColorTexture()

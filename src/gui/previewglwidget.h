@@ -9,9 +9,9 @@
 #include <QOpenGLTexture>
 #include <QtCore/QElapsedTimer>
 
-#include "../brush.h"
+#include "../brush_settings.h"
 #include "../brush_type.h"
-#include "kernel_cpu.h"
+#include "cpu_painter.h"
 
 class PreviewGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -24,7 +24,7 @@ public:
 	void reloadTexture(int, int);
 
 	void setBrushSettings(const BrushSettings& bs) {
-		cpuPainter.setBrush(bs);
+		painter->setBrush(bs);
 	}
 	void setBrushType(BrushType type);
 	void setTexture(QString type, QString file);
@@ -59,18 +59,16 @@ private:
 	void initVAO();
 	void imageTextureInit(int, int);
 
-    bool cudaEnabled;
-
 	BrushSettings brushSettings;
 
     QElapsedTimer performanceTimer;
 
-	CPUPainter cpuPainter;
+	std::unique_ptr<Painter> painter;
 
 public slots:
 	void refresh(int, double);
 
-	void enableCUDA(bool enable) {cudaEnabled = enable; }
+	void enableCUDA(bool enable);
 };
 
 #endif // PREVIEWGLWIDGET_H
