@@ -60,8 +60,8 @@ file(GLOB_RECURSE PROJECT_SRCS
 	"${CUDA_SRC_DIR}/*.h"
 )
 
-# Enable C++11 for host code
-set(CMAKE_CXX_STANDARD 11)
+# Enable C++14 for host code
+set(CMAKE_CXX_STANDARD 14)
 
 #CUDA
 
