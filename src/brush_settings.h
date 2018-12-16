@@ -5,9 +5,9 @@
 #include "color.h"
 
 struct BrushSettings {
-	qreal pressure;
-	qreal heightPressure;
-	qreal size;
-	qreal falloff;
+	double pressure;
+	double heightPressure;
+	double size;
+	double falloff;
 	Color color;
 };

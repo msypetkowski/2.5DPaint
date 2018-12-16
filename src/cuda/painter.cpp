@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <QOpenGLBuffer>
+#include <QElapsedTimer>
 
 #include  "cpu_painter.h"
 #include  "gpu_painter.h"

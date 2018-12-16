@@ -15,7 +15,7 @@ void GPUPainter::setBrushType(BrushType type) {
 	//TODO
 }
 
-void GPUPainter::setTexture(const std::string& type, const uchar *data) {
+void GPUPainter::setTexture(const std::string& type, const unsigned char *data) {
 }
 
 void GPUPainter::doPainting(int x, int y, uchar4 *pbo) {

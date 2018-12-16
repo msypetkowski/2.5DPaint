@@ -1,7 +1,6 @@
 #pragma once
 
-#include <QtGlobal>
-#include <QVector3D>
+#include <tuple>
 
 #include "cuda_runtime.h"
 
@@ -18,8 +17,8 @@ public:
 
 	Color() {}
 	Color(int x, int y, int z): x(x), y(y), z(z) {}
-	Color operator+(qreal v)const { return Color(x+v, y+v, z+v); }
-	Color operator*(qreal v)const { return Color(x*v, y*v, z*v); }
+	Color operator+(double v)const { return Color(x+v, y+v, z+v); }
+	Color operator*(double v)const { return Color(x*v, y*v, z*v); }
 	Color operator+(const Color& c)const { return Color(x+c.x, y+c.y, z+c.z); }
 	Color operator*(const Color& c)const { return Color(x*c.x, y*c.y, z*c.z); }
 

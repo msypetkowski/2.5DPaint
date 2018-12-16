@@ -4,6 +4,7 @@
 
 #include <QtMath>
 #include <QVector3D>
+#include <QElapsedTimer>
 
 #include "helper_cuda.h"
 
@@ -266,7 +267,7 @@ void CPUPainter::setTexture(const QString& type, const QString& path) {
 	}
 }
 
-std::pair<const QImage&, const QImage&> CPUPainter::getTextures(const QString& type) const {
+const QImage& CPUPainter::getTexture(const QString& type) const {
 	if (type == "colorFilename") {
 		return color_image;
 	} else {
