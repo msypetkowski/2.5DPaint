@@ -6,7 +6,7 @@
 
 __global__ void writeImageToPBO(uchar4* pbo, int width, int height, int mx, int my);
 
-void GPUPainter::setDimensions(int w, int h) {
+void GPUPainter::setDimensions(int w, int h, uchar4 *pbo) {
 	this->w = w;
 	this->h = h;
 }

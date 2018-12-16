@@ -120,7 +120,7 @@ void CPUPainter::updateWholeDisplay() {
 	}
 }
 
-void CPUPainter::setDimensions(int w1, int h1)
+void CPUPainter::setDimensions(int w1, int h1, uchar4 *pbo)
 {
 	w = w1;
 	h = h1;
@@ -131,6 +131,8 @@ void CPUPainter::setDimensions(int w1, int h1)
 	buffer.resize(buf_size);
 	bufferColor.resize(buf_size);
 	bufferHeight.resize(buf_size);
+
+	checkCudaErrors(cudaMemcpy(&buffer[0], pbo, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
 
 	Color fill(125, 125, 125);
 	bufferColor.fill(fill);
@@ -247,4 +249,11 @@ void CPUPainter::doPainting(int x, int y, uchar4 *pbo) {
 
 	std::clog << "Painting: " << painting_duration/1e6f << "ms\n";
 	std::clog << "Copying: " << memcpy_h2d/1e6f << "ms\n";
+}
+
+void CPUPainter::updateBuffer(uchar4 *pbo) {
+	if (w < 0 || h < 0)
+		return;
+	const auto buf_size = w * h * sizeof(uchar4);
+	checkCudaErrors(cudaMemcpy(&buffer[0], pbo, buf_size, cudaMemcpyDeviceToHost));
 }

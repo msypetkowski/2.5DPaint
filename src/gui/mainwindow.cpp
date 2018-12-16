@@ -11,8 +11,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     auto glwidget = ui->openGLWidget;
-	assert(connect(ui->enableCudaCheckBox, SIGNAL(clicked(bool)), glwidget, SLOT(enableCUDA(bool))));
-	glwidget->enableCUDA(ui->enableCudaCheckBox->isChecked());
+	assert(connect(ui->enableCudaCheckBox, SIGNAL(clicked(bool)), this, SLOT(enableCuda())));
 
 	assert(connect(ui->brushPressureSpinBox, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
 	assert(connect(ui->heightPressureSpinBox, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
@@ -32,8 +31,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	assert(connect(ui->colorChooseButton, SIGNAL(clicked(bool)), this, SLOT(setColorTexture())));
 	assert(connect(ui->heightChooseButton, SIGNAL(clicked(bool)), this, SLOT(setHeightTexture())));
 
+	enableCuda();
 	updateSettings();
-	updateBrushType();
 }
 
 MainWindow::~MainWindow()
@@ -57,10 +56,16 @@ void MainWindow::updateSettings()
 
 void MainWindow::updateBrushType()
 {
-	const auto brush_id = ui->defaultBrush->isChecked() 
-		+ (ui->texturedBrush->isChecked() << 1) 
-	    + (ui->radioButton_3->isChecked() << 2);
+	const auto brush_id = (ui->defaultBrush->isChecked() ? static_cast<int>(BrushType::Default) : 0)
+		+ (ui->texturedBrush->isChecked() ? static_cast<int>(BrushType::Textured) : 0)
+	    + (ui->radioButton_3->isChecked() ? static_cast<int>(BrushType::Third) : 0);
 	ui->openGLWidget->setBrushType(static_cast<BrushType>(brush_id));
+}
+
+void MainWindow::enableCuda() {
+	ui->openGLWidget->enableCUDA(ui->enableCudaCheckBox->isChecked());
+	updateBrushType();
+	updateSettings();
 }
 
 void MainWindow::setColorTexture()

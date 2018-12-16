@@ -10,7 +10,7 @@ class GPUPainter : public Painter {
 public:
 	~GPUPainter() override {}
 
-	void setDimensions(int w, int h) override;
+	void setDimensions(int w, int h, uchar4 *pbo) override;
 	void setBrushType(BrushType type) override;
 
 private:

@@ -24,6 +24,7 @@ public slots:
 	void updateBrushType();
 	void setHeightTexture();
 	void setColorTexture();
+	void enableCuda();
 
 private:
 	void browseFilesFor(QLabel *what);

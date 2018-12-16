@@ -19,7 +19,7 @@ public:
 	void setTexture(QString type, QString path);
 	void paint(int x, int y, uchar4 *pbo);
 
-	virtual void setDimensions(int w, int h) = 0;
+	virtual void setDimensions(int w, int h, uchar4 *pbo) = 0;
 	virtual void setBrushType(BrushType type) = 0;
 
 	static std::unique_ptr<Painter> make_painter(bool is_gpu);

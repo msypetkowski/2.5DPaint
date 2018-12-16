@@ -235,25 +235,25 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event) {
 	lastPos = event->pos();
 
 	int buf_size = width * height;
-	if (painter->getWidth() != width || painter->getHeight() != height) {
-		painter->setDimensions(width, height);
-	}
-
 	std::clog << "BRUSH: w=" << width << ", h=" << height << ", mx=" << lastPos.x() << ", my=" << lastPos.y() << "\n";
 	assert(pbo_dptr);
-	painter->paint(lastPos.x(), lastPos.y(), pbo_dptr);
+	if (painter()->getWidth() != width || painter()->getHeight() != height)
+		painter()->setDimensions(width, height, pbo_dptr);
+	painter()->paint(lastPos.x(), lastPos.y(), pbo_dptr);
 
 	update();
 }
 
 void PreviewGLWidget::setBrushType(BrushType type) {
-	painter->setBrushType(type);
+	painter()->setBrushType(type);
 }
 
 void PreviewGLWidget::setTexture(QString type, QString file) {
-	painter->setTexture(type, file);
+	painter()->setTexture(type, file);
 }
 
 void PreviewGLWidget::enableCUDA(bool enable) {
-	painter = Painter::make_painter(enable);
+	cuda_enabled = enable;
+	if (!enable)
+		cpu->updateBuffer(pbo_dptr);
 }

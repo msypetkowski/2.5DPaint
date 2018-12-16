@@ -15,13 +15,14 @@ public:
 	CPUPainter() {}
 	~CPUPainter() override {}
 
-	void setDimensions(int w, int h) override;
+	void setDimensions(int w, int h, uchar4 *pbo) override;
 	void setBrushType(BrushType type) override;
 
 	void updateWholeDisplay();
 	void brushBasic(int mx, int my);
 	void brushTextured(int mx, int my);
 
+	void updateBuffer(uchar4 *pbo);
 private:
 	int getBufferIndex(int x, int y);
 	bool inBounds(int x, int y);

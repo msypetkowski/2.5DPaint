@@ -1,6 +1,8 @@
 #ifndef PREVIEWGLWIDGET_H
 #define PREVIEWGLWIDGET_H
 
+#include <array>
+
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
 #include <QOpenGLVertexArrayObject>
@@ -11,6 +13,7 @@
 #include "../brush_settings.h"
 #include "../brush_type.h"
 #include "cpu_painter.h"
+#include "gpu_painter.h"
 
 class PreviewGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -23,10 +26,11 @@ public:
 	void reloadTexture(int, int);
 
 	void setBrushSettings(const BrushSettings& bs) {
-		painter->setBrush(bs);
+		painter()->setBrush(bs);
 	}
 	void setBrushType(BrushType type);
 	void setTexture(QString type, QString file);
+	void enableCUDA(bool enable);
 
 protected:
     void initializeGL() override;
@@ -51,7 +55,7 @@ private:
 	QPoint lastPos;
 	int xAtPress, yAtPress;
 
-	int width, height;
+	int width = -1, height = -1;
 
 	void initShader();
 	void initPBO(int, int);
@@ -62,12 +66,17 @@ private:
 	BrushSettings brushSettings;
 
 
-	std::unique_ptr<Painter> painter;
+	bool cuda_enabled;
+	std::unique_ptr<GPUPainter> gpu = std::make_unique<GPUPainter>();
+	std::unique_ptr<CPUPainter> cpu = std::make_unique<CPUPainter>();
+
+	Painter *painter() {
+		return cuda_enabled ? (Painter *)gpu.get() : (Painter *)cpu.get();
+	}
 
 public slots:
 	void refresh(int, double);
 
-	void enableCUDA(bool enable);
 };
 
 #endif // PREVIEWGLWIDGET_H
