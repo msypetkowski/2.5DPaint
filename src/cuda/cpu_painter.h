@@ -22,6 +22,9 @@ public:
 	void brushBasic(int mx, int my);
 	void brushTextured(int mx, int my);
 
+	void setTexture(const QString& type, const QString& path);
+	const QImage& getTexture(const QString& type) const;
+
 	void updateBuffer(uchar4 *pbo);
 private:
 	int getBufferIndex(int x, int y);
@@ -40,6 +43,9 @@ private:
 	// internal representation buffers
 	QVector<Color> bufferColor;
 	QVector<qreal> bufferHeight;
+
+	QImage color_image = QImage();
+	QImage height_image = QImage();
 
 	std::function<void(int, int)> paint_function;
 };

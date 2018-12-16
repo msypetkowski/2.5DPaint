@@ -15,14 +15,6 @@ std::unique_ptr<Painter> Painter::make_painter(bool is_gpu) {
 	}
 }
 
-void Painter::setTexture(QString type, QString path) {
-	if (type == "colorFilename") {
-		color_image = QImage(path);
-	} else {
-		height_image = QImage(path);
-	}
-}
-
 void Painter::paint(int x, int y, uchar4 *pbo) {
     QElapsedTimer performanceTimer;
 	performanceTimer.restart();

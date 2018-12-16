@@ -257,3 +257,20 @@ void CPUPainter::updateBuffer(uchar4 *pbo) {
 	const auto buf_size = w * h * sizeof(uchar4);
 	checkCudaErrors(cudaMemcpy(&buffer[0], pbo, buf_size, cudaMemcpyDeviceToHost));
 }
+
+void CPUPainter::setTexture(const QString& type, const QString& path) {
+	if (type == "colorFilename") {
+		color_image = QImage(path);
+	} else {
+		height_image = QImage(path);
+	}
+}
+
+std::pair<const QImage&, const QImage&> CPUPainter::getTextures(const QString& type) const {
+	if (type == "colorFilename") {
+		return color_image;
+	} else {
+		return height_image;
+	}
+}
+

@@ -15,6 +15,9 @@ void GPUPainter::setBrushType(BrushType type) {
 	//TODO
 }
 
+void GPUPainter::setTexture(const std::string& type, const uchar *data) {
+}
+
 void GPUPainter::doPainting(int x, int y, uchar4 *pbo) {
 	const int blockSideLength = 32;
 	const dim3 blockSize(blockSideLength, blockSideLength);
@@ -48,3 +51,4 @@ void writeImageToPBO(uchar4* pbo, int width, int height, int mx, int my) {
 		pbo[index].z = 255.0f;
 	}
 }
+
