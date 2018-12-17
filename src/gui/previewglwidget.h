@@ -28,6 +28,7 @@ public:
 	void setBrushSettings(const BrushSettings& bs) {
 		painter()->setBrush(bs);
 	}
+	void applyBrush(int x, int y);
 	void setBrushType(BrushType type);
 	void setTexture(QString type, QString file);
 	void enableCUDA(bool enable);

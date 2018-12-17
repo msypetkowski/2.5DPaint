@@ -213,6 +213,12 @@ void PreviewGLWidget::mousePressEvent(QMouseEvent * event)
 	xAtPress = event->x();
 	yAtPress = event->y();
 
+    lastPos = event->pos();
+
+	applyBrush(xAtPress, yAtPress);
+
+	update();
+
 	printf("PreviewGLWidget::mousePressEvent(): %dx%d\n", xAtPress, yAtPress);
 }
 
@@ -234,14 +240,18 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event) {
 
 	lastPos = event->pos();
 
+	applyBrush(lastPos.x(), lastPos.y());
+
+	update();
+}
+
+void PreviewGLWidget::applyBrush(int x, int y) {
 	int buf_size = width * height;
 	std::clog << "BRUSH: w=" << width << ", h=" << height << ", mx=" << lastPos.x() << ", my=" << lastPos.y() << "\n";
 	assert(pbo_dptr);
 	if (painter()->getWidth() != width || painter()->getHeight() != height)
 		painter()->setDimensions(width, height, pbo_dptr);
-	painter()->paint(lastPos.x(), lastPos.y(), pbo_dptr);
-
-	update();
+	painter()->paint(x, y, pbo_dptr);
 }
 
 void PreviewGLWidget::setBrushType(BrushType type) {
