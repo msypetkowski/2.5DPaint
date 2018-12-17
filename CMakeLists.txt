@@ -2,7 +2,6 @@
 
 project(2.5DPaint)
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_BINARY_DIR "${CMAKE_SOURCE_DIR}/build")
 
 # set output directories
