@@ -9,5 +9,5 @@ struct BrushSettings {
 	double heightPressure;
 	double size;
 	double falloff;
-	Color color;
+	float3 color;
 };

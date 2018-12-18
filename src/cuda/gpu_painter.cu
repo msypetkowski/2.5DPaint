@@ -11,6 +11,10 @@ void GPUPainter::setDimensions(int w, int h, uchar4 *pbo) {
 	this->h = h;
 }
 
+int GPUPainter::getBufferIndex(int x, int y) {
+    return w - 1 - x + (y * w);
+}
+
 void GPUPainter::setBrushType(BrushType type) {
 	//TODO
 }

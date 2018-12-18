@@ -27,25 +27,22 @@ public:
 
 	void updateBuffer(uchar4 *pbo);
 private:
-	int getBufferIndex(int x, int y);
-	bool inBounds(int x, int y);
-	qreal sampleHeight(int x, int y);
-	QVector3D getNormal(int x, int y);
+	int getBufferIndex(int x, int y) override;
 
-	void updateDisplay(int x, int y);
 	void updatePainted(int mx, int my);
 
 	void doPainting(int x, int y, uchar4 *pbo) override;
 
-	// buffer for display information
-	QVector<uchar4> buffer;
-
-	// internal representation buffers
-	QVector<Color> bufferColor;
-	QVector<qreal> bufferHeight;
-
+	// textures
 	QImage color_image = QImage();
 	QImage height_image = QImage();
+
+	// internal representation buffers
+	QVector<float3> bufferColor;
+	QVector<float> bufferHeight;
+
+	// buffer for display information
+	QVector<uchar4> buffer;
 
 	std::function<void(int, int)> paint_function;
 };
