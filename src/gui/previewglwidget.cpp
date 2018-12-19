@@ -1,6 +1,5 @@
 #include "previewglwidget.h"
 #include "cuda_gl_interop.h"
-#include "helper_cuda.h"
 
 #include <iostream>
 
@@ -82,19 +81,19 @@ void PreviewGLWidget::initPBO(int w, int h) {
 	m_pbo->create();
 	m_pbo->bind();
 	m_pbo->allocate(sizeof_pbo);
-	checkCudaErrors(cudaGraphicsGLRegisterBuffer(&viewPBO_cuda, m_pbo->bufferId(), cudaGraphicsMapFlagsWriteDiscard));
+	(cudaGraphicsGLRegisterBuffer(&viewPBO_cuda, m_pbo->bufferId(), cudaGraphicsMapFlagsWriteDiscard));
 
 	size_t num_bytes;
 	// map buffer object
-	checkCudaErrors(cudaGraphicsMapResources(1, &viewPBO_cuda));
-	checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void**)&pbo_dptr, &num_bytes, viewPBO_cuda));
+	(cudaGraphicsMapResources(1, &viewPBO_cuda));
+	(cudaGraphicsResourceGetMappedPointer((void**)&pbo_dptr, &num_bytes, viewPBO_cuda));
 	assert(pbo_dptr);
 }
 
 void PreviewGLWidget::deletePBO() {
 	if (m_pbo) {
-		checkCudaErrors(cudaGraphicsUnmapResources(1, &viewPBO_cuda));
-		checkCudaErrors(cudaGraphicsUnregisterResource(viewPBO_cuda));
+		(cudaGraphicsUnmapResources(1, &viewPBO_cuda));
+		(cudaGraphicsUnregisterResource(viewPBO_cuda));
 
 		m_pbo->bind();
 		m_pbo->destroy();
@@ -260,11 +259,11 @@ void PreviewGLWidget::setBrushType(BrushType type) {
 
 void PreviewGLWidget::setTexture(QString type, QString file) {
 	cpu->setTexture(type, file);
-	gpu->setTexture(type.toStdString(), cpu->getTexture(type).bits());
+	gpu->setTexture(type.toStdString(), cpu->getTexture(type).bits(), cpu->getTexture(type).width(), cpu->getTexture(type).height());
 }
 
 void PreviewGLWidget::enableCUDA(bool enable) {
 	cuda_enabled = enable;
-	if (!enable)
-		cpu->updateBuffer(pbo_dptr);
+	/*if (!enable)
+		cpu->updateBuffer(pbo_dptr);*/
 }

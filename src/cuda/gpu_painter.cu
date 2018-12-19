@@ -3,12 +3,35 @@
 #include <iostream>
 
 #include "helper_cuda.h"
+#include "utils.h"
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+#include "stdio.h"
 
 __global__ void writeImageToPBO(uchar4* pbo, int width, int height, int mx, int my);
 
 void GPUPainter::setDimensions(int w, int h, uchar4 *pbo) {
 	this->w = w;
 	this->h = h;
+
+	int buf_size = w * h;
+
+	printf("init/resize gpu buffers (%d, %d)\n", w, h);
+
+	cudaFree(d_buffer_color);
+	cudaFree(d_buffer_height);
+	cudaFree(d_buffer_pbo);
+
+	checkCudaErrors(cudaMalloc((void**)&d_buffer_pbo, buf_size * sizeof(uchar4)));
+	//cudaMemset(buffer_pbo, 0, buf_size* sizeof(uchar4));
+
+	checkCudaErrors(cudaMalloc((void**)&d_buffer_height, buf_size * sizeof(float)));
+	//cudaMemset(buffer_height, 0, buf_size * sizeof(float));
+
+	checkCudaErrors(cudaMalloc((void**)&d_buffer_color, buf_size * sizeof(float3)));
+	//cudaMemset(buffer_color, 0, buf_size * sizeof(float3));
+
+	//updateWholeDisplay();
 }
 
 int GPUPainter::getBufferIndex(int x, int y) {
@@ -16,10 +39,37 @@ int GPUPainter::getBufferIndex(int x, int y) {
 }
 
 void GPUPainter::setBrushType(BrushType type) {
-	//TODO
+	/*switch (type) {
+	case BrushType::Default:
+		paint_function = std::bind(&CPUPainter::brushBasic, this, _1, _2);
+		break;
+	case BrushType::Textured:
+		paint_function = std::bind(&CPUPainter::brushTextured, this, _1, _2);
+		break;
+	case BrushType::Third:
+		std::clog << "Warning: chose unused brush\n";
+		break;
+	default:
+		throw std::runtime_error("Invalid brush type: "
+			+ std::to_string(static_cast<int>(type)));
+	}*/
 }
 
-void GPUPainter::setTexture(const std::string& type, const unsigned char *data) {
+void GPUPainter::setTexture(const std::string& type, const unsigned char *data, int width, int height) {
+
+	image_height = height;
+	image_width = width;
+
+	if (type == "colorFilename") {
+		checkCudaErrors(cudaMalloc((void**)&d_color_texture, sizeof(data)));
+		checkCudaErrors(cudaMemcpy(d_color_texture, data, sizeof(data), cudaMemcpyHostToDevice));
+	}
+	else {
+		checkCudaErrors(cudaMalloc((void**)&d_height_texture, sizeof(data)));
+		checkCudaErrors(cudaMemcpy(d_height_texture, data, sizeof(data), cudaMemcpyHostToDevice));
+	}
+	
+
 }
 
 void GPUPainter::doPainting(int x, int y, uchar4 *pbo) {
@@ -35,7 +85,7 @@ void GPUPainter::doPainting(int x, int y, uchar4 *pbo) {
 }
 
 void setupCuda() {
-	checkCudaErrors(cudaSetDevice(0));
+	(cudaSetDevice(0));
 }
 
 //Kernel that writes the image to the OpenGL PBO directly.
@@ -53,6 +103,8 @@ void writeImageToPBO(uchar4* pbo, int width, int height, int mx, int my) {
 		pbo[index].x = 255.0f;
 		pbo[index].y = 0.0f;
 		pbo[index].z = 255.0f;
-	}
-}
 
+	}
+
+	
+}

@@ -1,0 +1,10 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\cuda",
+    "\\src\\gui"
+  ],
+  "SelectedNode": "\\src\\cuda\\cpu_painter.h",
+  "PreviewInSolutionExplorer": false
+}

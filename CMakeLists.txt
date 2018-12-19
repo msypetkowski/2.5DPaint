@@ -12,14 +12,14 @@ set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_BINARY_DIR})
 
 # QT
 # Set your qt version and configuration (example: gcc_64, msvc2015)
-set(QT_VERSION "5.11.2")
+set(QT_VERSION "5.12.0")
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     set(QT_CONFIG "gcc_64")
 	set(CMAKE_PREFIX_PATH "~/Qt${QT_VERSION}/${QT_VERSION}/${QT_CONFIG}")
 elseif(WIN32 OR WIN64)
-    set(QT_CONFIG "msvc2017_64")
-    set(CMAKE_PREFIX_PATH "C:\\Qt\\${QT_VERSION}\\${QT_CONFIG}\\")
+    set(QT_CONFIG "msvc2015_64")
+    set(CMAKE_PREFIX_PATH "D:\\Programy\\Qt\\${QT_VERSION}\\${QT_CONFIG}\\")
 endif()
 
 # Find includes in corresponding build directories
@@ -78,6 +78,10 @@ endif()
 # CUDA linking
 find_package(Threads REQUIRED)
 find_package(CUDA REQUIRED)
+#enable_language(CUDA) 
+
+#set(CMAKE_CUDA_COMPILER "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.0/bin/nvcc.exe")
+#enable_language(CUDA)
 
 set(CUDA_GENERATED_OUTPUT_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set(CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE ON)
@@ -90,12 +94,13 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     include_directories("/opt/cuda/samples/common/inc/") # default arch linux cuda inc path
 elseif(WIN32 OR WIN64)
     include_directories("$ENV{NVCUDASAMPLES_ROOT}\\common\\inc")
+    include_directories("C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.0\\include")
 endif()
 
 #executables
 
 # Tell CMake to create the helloworld executable
-cuda_add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SRCS})
+add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SRCS})
 # Use the Widgets module from Qt 5
 target_link_libraries(${CMAKE_PROJECT_NAME} Qt5::Widgets)
 

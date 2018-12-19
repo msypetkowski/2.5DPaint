@@ -2,6 +2,8 @@
 #include "helper_math.h"
 #include "assert.h"
 
+#define M_PI 3.14
+
 float3 __host__ __device__ interpolate_color(float3 oldColor, float strength, const float3& newColor) {
     float3 ret;
     ret = lerp(oldColor, newColor, strength);
