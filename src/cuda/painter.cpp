@@ -27,11 +27,15 @@ void Painter::paint(int x, int y, uchar4 *pbo) {
     std::clog << "Time netto: " << elapsed_time / 1e6f << "ms\n";
 }
 
-bool __host__ __device__ Painter::in_bounds(int x, int y) {
+int Painter::getBufferIndex(int x, int y) {
+    return w - 1 - x + (y * w);
+}
+
+bool Painter::in_bounds(int x, int y) {
     return x >= 0 && x < w && y >= 0 && y < h;
 }
 
-void __host__ __device__ Painter::brushBasicPixel(int x, int y, int mx, int my) {
+void Painter::brushBasicPixel(int x, int y, int mx, int my) {
     if (!in_bounds(x, y))
         return;
 
@@ -52,7 +56,7 @@ void __host__ __device__ Painter::brushBasicPixel(int x, int y, int mx, int my) 
     buffer_height[i] = clamp(buffer_height[i] + strength, -1.0f, 1.0f);
 }
 
-void __host__ __device__ Painter::updateDisplayPixel(int x, int y) {
+void Painter::updateDisplayPixel(int x, int y) {
     int i = getBufferIndex(x, y);
 
     auto normal = getNormal(x, y);
@@ -77,7 +81,7 @@ void __host__ __device__ Painter::updateDisplayPixel(int x, int y) {
     buffer_pbo[i] = make_uchar4(color.x, color.y, color.z, 0);
 }
 
-float3 __host__ __device__ Painter::getNormal(int x, int y) {
+float3 Painter::getNormal(int x, int y) {
     float dx = 0, dy = 0;
 
     auto mid = sampleHeight(x, y);
@@ -103,8 +107,6 @@ float3 __host__ __device__ Painter::getNormal(int x, int y) {
     assert(fabsf(dy) <= 1);
     auto ret = make_float3(dx, dy, sqrtf(clamp(1.0f - dx * dx - dy * dy, 0.0f, 1.0f)));
     return normalize(ret);
-
-
 }
 
 float Painter::sampleHeight(int x, int y) {

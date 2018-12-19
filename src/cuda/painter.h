@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <functional>
 
 #include "../brush_settings.h"
 #include "../brush_type.h"
@@ -17,15 +18,14 @@ public:
 
 	virtual void setDimensions(int w, int h, uchar4 *pbo) = 0;
 	virtual void setBrushType(BrushType type) = 0;
+    int getBufferIndex(int x, int y);
 
 	void brushBasicPixel(int x, int y, int mx, int my);
 	void updateDisplayPixel(int x, int y);
 	float3 getNormal(int x, int y);
 	float sampleHeight(int x, int y);
 
-	bool __host__ __device__ in_bounds(int x, int y);
-
-	virtual int getBufferIndex(int x, int y) = 0;
+	bool in_bounds(int x, int y);
 
 	static std::unique_ptr<Painter> make_painter(bool is_gpu);
 private:
@@ -42,4 +42,7 @@ protected:
 	// internal representation buffers
 	float3* buffer_color = nullptr;
 	float* buffer_height = nullptr;
+
+	//paint function
+    std::function<void(int, int)> paint_function;
 };

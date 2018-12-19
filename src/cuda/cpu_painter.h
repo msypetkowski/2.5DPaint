@@ -19,15 +19,17 @@ public:
 	void setBrushType(BrushType type) override;
 
 	void updateWholeDisplay();
-	void brushBasic(int mx, int my);
-	void brushTextured(int mx, int my);
 
 	void setTexture(const QString& type, const QString& path);
 	const QImage& getTexture(const QString& type) const;
 
 	void updateBuffer(uchar4 *pbo);
+
+	// brush functions
+	void brushBasic(int mx, int my);
+	void brushTextured(int mx, int my);
+
 private:
-	int getBufferIndex(int x, int y) override;
 
 	void updatePainted(int mx, int my);
 
@@ -44,5 +46,4 @@ private:
 	// buffer for display information
 	QVector<uchar4> buffer;
 
-	std::function<void(int, int)> paint_function;
 };

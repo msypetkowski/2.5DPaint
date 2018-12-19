@@ -17,10 +17,6 @@ std::pair<int, int> get_coords(const QImage &image, int x, int y, int w, int h) 
     return {pixel_x, pixel_y};
 }
 
-int CPUPainter::getBufferIndex(int x, int y) {
-    return w - 1 - x + (y * w);
-}
-
 void CPUPainter::updateWholeDisplay() {
     for (int x = 0; x < w; ++x) {
         for (int y = 0; y < h; ++y) {
