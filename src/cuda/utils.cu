@@ -1,6 +1,9 @@
 #include "utils.h"
 #include "helper_math.h"
 
+#define M_PI 3.14
+
+
 
 float3 interpolate_color(float3 oldColor, float strength, const float3& newColor) {
     float3 ret;
