@@ -66,10 +66,7 @@ float3 __device__ d_getNormal(int x, int y, int w, int h, float *buffer_height) 
 
 
 void __device__ brushBasicPixel(int x, int y, int mx, int my, int w, int h,
-                                float *buffer_height, float3 *buffer_color, const BrushSettings &bs) {
-
-    if (!in_bounds(x, y, w, h))
-        return;
+                                float *buffer_height, float3 *buffer_color, BrushSettings bs) {
 
     float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
     float brush_radius = bs.size / 2.0f;
@@ -91,7 +88,7 @@ void __device__ brushBasicPixel(int x, int y, int mx, int my, int w, int h,
 __device__
 void updateDisplayPixel(int x, int y, int w, int h, uchar4 *buffer_pbo, float *buffer_height, float3 *buffer_color) {
     int i = d_getBufferIndex(x, y, w);
-    //printf("[GPU] i = %d\n", i);
+
     auto normal = d_getNormal(x, y, w, h, buffer_height);
 
     float3 lighting = normalize(make_float3(0.07f, 0.07f, 1.0f));
@@ -105,7 +102,7 @@ void updateDisplayPixel(int x, int y, int w, int h, uchar4 *buffer_pbo, float *b
     specular = powf(specular, 8.0f);
     specular = clamp(specular, 0.0f, 1.0f);
 
-    float3 color = lerp(buffer_color[i] * shadow, make_float3(255, 255, 255), specular);
+    float3 color = lerp(buffer_color[i] * shadow, make_float3(255.0f), specular);
 
     // view normals (TODO: remove or make normals visualization feature)
     /*color.x = normal.x * 255.0 / 2 + 255.0 / 2;
@@ -116,7 +113,7 @@ void updateDisplayPixel(int x, int y, int w, int h, uchar4 *buffer_pbo, float *b
 }
 
 // kernels
-// Kernel that writes the image to the OpenGL PBO directly.
+// Kernel that paints brush basic
 __global__
 void brushBasicKernel(uchar4 *pbo, float *buffer_height, float3 *buffer_color,
                       int width, int height, int mx, int my, const BrushSettings bs) {
@@ -125,12 +122,9 @@ void brushBasicKernel(uchar4 *pbo, float *buffer_height, float3 *buffer_color,
     int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
     if (in_bounds(x, y, width, height)) {
-        //__syncthreads();
 
         // use brush
         brushBasicPixel(x, y, mx, my, width, height, buffer_height, buffer_color, bs);
-
-        //__syncthreads();
 
         // shading pixels
         updateDisplayPixel(x, y, width, height, pbo, buffer_height, buffer_color);
@@ -138,9 +132,9 @@ void brushBasicKernel(uchar4 *pbo, float *buffer_height, float3 *buffer_color,
 }
 
 
-void GPUPainter::setDimensions(int w, int h, uchar4 *pbo) {
-    this->w = w;
-    this->h = h;
+void GPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
+    w = w1;
+    h = h1;
 
     buffer_pbo = pbo;
 
@@ -155,9 +149,9 @@ void GPUPainter::setDimensions(int w, int h, uchar4 *pbo) {
     checkCudaErrors(cudaMemset(buffer_height, 0, buf_size * sizeof(float)));
 
     checkCudaErrors(cudaMalloc((void **) &buffer_color, buf_size * sizeof(float3)));
+    // @ TODO init buffer with correct color
     checkCudaErrors(cudaMemset(buffer_color, 0, buf_size * sizeof(float3)));
 
-    //updateWholeDisplay();
 }
 
 void GPUPainter::setBrushType(BrushType type) {
@@ -203,12 +197,13 @@ void GPUPainter::brushBasic(int mx, int my) {
     const dim3 blocksPerGrid(
             (w + blockSize.x - 1) / blockSize.x,
             (h + blockSize.y - 1) / blockSize.y);
+    // @ TODO compute cuda time
     brushBasicKernel << < blocksPerGrid, blockSize >> >
                                          (buffer_pbo, buffer_height, buffer_color, w, h, mx, my, brushSettings);
     checkCudaErrors(cudaDeviceSynchronize());
 }
 
 void GPUPainter::brushTextured(int mx, int my) {
-
+    // @TODO
 }
 

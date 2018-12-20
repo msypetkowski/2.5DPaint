@@ -23,8 +23,6 @@ public:
 private:
 	void doPainting(int x, int y, uchar4 *pbo) override;
 
-	int w, h;
-
     int image_width, image_height;
     unsigned char* d_color_texture;
     unsigned char* d_height_texture;
