@@ -26,8 +26,8 @@ private:
 	//int w, h;
 
     int color_image_width, color_image_height, height_image_height, height_image_width;
-    unsigned char* d_color_texture;
-    unsigned char* d_height_texture;
+    unsigned char* d_color_texture = nullptr;
+    unsigned char* d_height_texture = nullptr;
 	int color_image_bytes_per_pixel;
 	int height_image_bytes_per_pixel;
 
