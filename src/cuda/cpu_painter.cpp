@@ -38,10 +38,9 @@ void CPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
 
     checkCudaErrors(cudaMemcpy(buffer.data(), pbo, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
 
-    float3 fill = make_float3(125, 125, 125);
+    float3 fill = make_float3(75);
     bufferColor.fill(fill);
     bufferHeight.fill(0.0);
-    // cpu_buffer.fill(fill);
 
     // assign pointers
     buffer_pbo = buffer.data();
