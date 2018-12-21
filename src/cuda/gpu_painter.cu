@@ -2,8 +2,10 @@
 
 #include <iostream>
 
+#include "cuda_runtime.h"
 #include "helper_cuda.h"
 #include "helper_math.h"
+#include "device_launch_parameters.h"
 
 
 void setupCuda() {
@@ -31,6 +33,9 @@ float __device__ d_normal_from_delta(float dx) {
 }
 
 int __device__ d_getBufferIndex(int x, int y, int w) { return (w - 1 - x + (y * w)); };
+
+int __device__ d_getImageByteIndex(int x, int y, int h, int w, int bpp) { return (w * bpp) * y + x * bpp; };
+
 
 float __device__ d_sampleHeight(int x, int y, int w, int h, float *buffer_height) {
     x = clamp(x, 0, w - 1);
@@ -65,14 +70,19 @@ float3 __device__ d_getNormal(int x, int y, int w, int h, float *buffer_height) 
 }
 
 
+int2 __device__ d_get_coords(int x, int y, int w, int h, int width, int height) {
+    const auto pixel_x = int(x / float(w) * width);
+    const auto pixel_y = int(y / float(w) * height);
+    //int cord[] = { pixel_x, pixel_y };
+    return make_int2(pixel_x, pixel_y);
+}
+
 void __device__ brushBasicPixel(int x, int y, int mx, int my, int w, int h,
-                                float *buffer_height, float3 *buffer_color, BrushSettings bs) {
+                                float *buffer_height, float3 *buffer_color, const BrushSettings &bs) {
 
     float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
     float brush_radius = bs.size / 2.0f;
-    if (radius > brush_radius) {
-        return;
-    }
+
     int i = d_getBufferIndex(x, y, w);
 
     // paint color
@@ -121,16 +131,32 @@ void brushBasicKernel(uchar4 *pbo, float *buffer_height, float3 *buffer_color,
     int x = (blockIdx.x * blockDim.x) + threadIdx.x;
     int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
-    if (in_bounds(x, y, width, height)) {
+    float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
+    float brush_radius = bs.size / 2.0f;
+    if (radius < brush_radius) {
+        if (in_bounds(x, y, width, height)) {
+            // use brush
+            brushBasicPixel(x, y, mx, my, width, height, buffer_height, buffer_color, bs);
+        }
+    }
+}
 
-        // use brush
-        brushBasicPixel(x, y, mx, my, width, height, buffer_height, buffer_color, bs);
+// Kernel that updates image display
+__global__
+void updateDisplayKernel(uchar4 *pbo, float *buffer_height, float3 *buffer_color,
+                         int width, int height, int mx, int my, const BrushSettings bs) {
 
+    int x = (blockIdx.x * blockDim.x) + threadIdx.x;
+    int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+
+    float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
+    float brush_radius = bs.size / 2.0f;
+
+    if (radius < brush_radius && in_bounds(x, y, width, height)) {
         // shading pixels
         updateDisplayPixel(x, y, width, height, pbo, buffer_height, buffer_color);
     }
 }
-
 
 void GPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     w = w1;
@@ -172,16 +198,22 @@ void GPUPainter::setBrushType(BrushType type) {
     }
 }
 
-void GPUPainter::setTexture(const std::string &type, const unsigned char *data, int width, int height) {
-    image_height = height;
-    image_width = width;
+void
+GPUPainter::setTexture(const std::string &type, const unsigned char *data, int width, int height, int bytes_per_pixel) {
+    int pixel_datasize = width * height * bytes_per_pixel * sizeof(unsigned char);
 
     if (type == "colorFilename") {
-        checkCudaErrors(cudaMalloc((void **) &d_color_texture, sizeof(data)));
-        checkCudaErrors(cudaMemcpy(d_color_texture, data, sizeof(data), cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMalloc((void **) &d_color_texture, pixel_datasize));
+        checkCudaErrors(cudaMemcpy(d_color_texture, data, pixel_datasize, cudaMemcpyHostToDevice));
+        color_image_height = height;
+        color_image_width = width;
+        color_image_bytes_per_pixel = bytes_per_pixel;
     } else {
-        checkCudaErrors(cudaMalloc((void **) &d_height_texture, sizeof(data)));
-        checkCudaErrors(cudaMemcpy(d_height_texture, data, sizeof(data), cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMalloc((void **) &d_height_texture, pixel_datasize));
+        checkCudaErrors(cudaMemcpy(d_height_texture, data, pixel_datasize, cudaMemcpyHostToDevice));
+        height_image_height = height;
+        height_image_width = width;
+        height_image_bytes_per_pixel = bytes_per_pixel;
     }
 }
 
@@ -200,10 +232,75 @@ void GPUPainter::brushBasic(int mx, int my) {
     // @ TODO compute cuda time
     brushBasicKernel << < blocksPerGrid, blockSize >> >
                                          (buffer_pbo, buffer_height, buffer_color, w, h, mx, my, brushSettings);
+    updateDisplayKernel << < blocksPerGrid, blockSize >> >
+                                            (buffer_pbo, buffer_height, buffer_color, w, h, mx, my, brushSettings);
     checkCudaErrors(cudaDeviceSynchronize());
 }
 
-void GPUPainter::brushTextured(int mx, int my) {
-    // @TODO
+
+void __device__ brushTexturedPixel(int x, int y, int mx, int my, int w, int h,
+                                   float *buffer_height, float3 *buffer_color, const BrushSettings &bs,
+                                   unsigned char *color_texture, unsigned char *height_texture, int cih, int ciw,
+                                   int hih, int hiw, int cbpp, int hbpp) {
+
+    float maxRadius = bs.size / 2;
+
+    float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
+
+    int i = d_getBufferIndex(x, y, w);
+
+    float strength = bs.pressure * d_cosine_fallof(radius / maxRadius, bs.falloff);
+    const auto color_coords =
+            d_get_coords(x - mx + maxRadius, y - my + maxRadius, maxRadius * 2, maxRadius * 2, ciw, cih);
+    const auto pixel = d_getImageByteIndex(color_coords.x, color_coords.y, cih, ciw, cbpp);
+    buffer_color[i] = d_interpolate_color(
+            buffer_color[i],
+            strength,
+            make_float3(color_texture[pixel], color_texture[pixel + 1], color_texture[pixel + 2]));
+
+    const auto height_coords =
+            d_get_coords(x - mx + maxRadius, y - my + maxRadius, maxRadius * 2, maxRadius * 2, hiw, hih);
+    const auto height = color_texture[d_getImageByteIndex(height_coords.x, height_coords.y, hih, hiw, hbpp)] * 0.001f;
+    strength = bs.heightPressure * height * d_cosine_fallof(radius / maxRadius, bs.falloff);
+    buffer_height[i] = clamp(buffer_height[i] + strength, -1.0f, 1.0f);
 }
+
+__global__
+void brushTexturedKernel(uchar4 *pbo, float *buffer_height, float3 *buffer_color,
+                         int width, int height, int mx, int my, const BrushSettings bs, unsigned char *color_texture,
+                         unsigned char *height_texture, int cih, int ciw, int hih, int hiw, int cbpp, int hbpp) {
+
+    int x = (blockIdx.x * blockDim.x) + threadIdx.x;
+    int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+
+    float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
+    float brush_radius = bs.size / 2.0f;
+
+    if (radius < brush_radius && in_bounds(x, y, width, height)) {
+        // shading pixels
+        brushTexturedPixel(x, y, mx, my, width, height, buffer_height, buffer_color, bs, color_texture, height_texture,
+                           cih, ciw, hih, hiw, cbpp, hbpp);
+    }
+}
+
+
+void GPUPainter::brushTextured(int mx, int my) {
+    const int blockSideLength = 32;
+    const dim3 blockSize(blockSideLength, blockSideLength);
+    const dim3 blocksPerGrid(
+            (w + blockSize.x - 1) / blockSize.x,
+            (h + blockSize.y - 1) / blockSize.y);
+
+    if (d_color_texture == nullptr || d_height_texture == nullptr) {
+        return;
+    }
+
+    brushTexturedKernel << < blocksPerGrid, blockSize >> >
+                                            (buffer_pbo, buffer_height, buffer_color, w, h, mx, my, brushSettings, d_color_texture, d_height_texture, color_image_height, color_image_width, height_image_height, height_image_width, color_image_bytes_per_pixel, height_image_bytes_per_pixel);
+    updateDisplayKernel << < blocksPerGrid, blockSize >> >
+                                            (buffer_pbo, buffer_height, buffer_color, w, h, mx, my, brushSettings);
+    checkCudaErrors(cudaDeviceSynchronize());
+}
+
+
 

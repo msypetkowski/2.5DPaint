@@ -260,8 +260,9 @@ void PreviewGLWidget::setBrushType(BrushType type) {
 
 void PreviewGLWidget::setTexture(QString type, QString file) {
 	cpu->setTexture(type, file);
-	gpu->setTexture(type.toStdString(), cpu->getTexture(type).bits(),
-	        cpu->getTexture(type).width(), cpu->getTexture(type).height());
+	QImage tmp = cpu -> getTexture(type).convertToFormat(QImage::Format_RGB888);
+	gpu->setTexture(type.toStdString(), tmp.bits(),
+	        tmp.width(),tmp.height(), tmp.bytesPerLine()/tmp.width());
 }
 
 void PreviewGLWidget::enableCUDA(bool enable) {

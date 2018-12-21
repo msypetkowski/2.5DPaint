@@ -41,7 +41,6 @@ void CPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     float3 fill = make_float3(75);
     bufferColor.fill(fill);
     bufferHeight.fill(0.0);
-    // cpu_buffer.fill(fill);
 
     // assign pointers
     buffer_pbo = buffer.data();
