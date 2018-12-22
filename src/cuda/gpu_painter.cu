@@ -1,6 +1,7 @@
 #include "gpu_painter.h"
 
 #include <iostream>
+#include <chrono>
 
 #include "cuda_runtime.h"
 #include "helper_cuda.h"
@@ -18,7 +19,7 @@ void GPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
 
     int buf_size = w * h;
 
-    printf("init/resize GPU buffers (%d, %d)\n", w, h);
+    printf("[GPU] init/resize GPU buffers (%d, %d)\n", w, h);
 
     if (buffer_color) { checkCudaErrors(cudaFree(buffer_color)); buffer_color = nullptr; }
     if (buffer_height) { checkCudaErrors(cudaFree(buffer_height)); buffer_height = nullptr; }
@@ -50,7 +51,7 @@ void GPUPainter::setBrushType(BrushType type) {
             paint_function = std::bind(&GPUPainter::brushTextured, this, _1, _2);
             break;
         case BrushType::Third:
-            std::clog << "Warning: chose unused brush\n";
+            std::clog << "[GPU] Warning: chose unused brush\n";
             break;
         default:
             throw std::runtime_error("Invalid brush type: "
@@ -81,8 +82,12 @@ void GPUPainter::setTexture(const std::string &type, const unsigned char *data, 
 }
 
 void GPUPainter::doPainting(int x, int y, uchar4 *pbo) {
+    auto start_time = std::chrono::steady_clock::now();
     paint_function(x, y);
-    //std::clog << "[GPU] Painting: " << painting_duration / 1e6f << "ms\n";
+    auto end_time = std::chrono::steady_clock::now();
+
+    std::clog << "[GPU] Painting time: " <<
+         (float)std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count() / (float)1e6 << " ms\n";
 }
 
 /**********************************************************************************************************************/

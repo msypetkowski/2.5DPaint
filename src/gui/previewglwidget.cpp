@@ -221,8 +221,6 @@ void PreviewGLWidget::mousePressEvent(QMouseEvent * event)
 	applyBrush(xAtPress, yAtPress);
 
 	update();
-
-	printf("PreviewGLWidget::mousePressEvent(): %dx%d\n", xAtPress, yAtPress);
 }
 
 void PreviewGLWidget::mouseReleaseEvent(QMouseEvent * event)
@@ -233,8 +231,6 @@ void PreviewGLWidget::mouseReleaseEvent(QMouseEvent * event)
 	// example code
 	int dx = xAtRelease - xAtPress;
 	int dy = yAtRelease - yAtPress;
-
-	printf("PreviewGLWidget::mouseReleaseEvent(): %dx%d\n", xAtRelease, yAtRelease);
 }
 
 void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event) {
@@ -249,8 +245,7 @@ void PreviewGLWidget::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void PreviewGLWidget::applyBrush(int x, int y) {
-	int buf_size = width * height;
-	std::clog << "BRUSH: w=" << width << ", h=" << height << ", mx=" << lastPos.x() << ", my=" << lastPos.y() << "\n";
+	std::clog << "\nBRUSH applying to: w=" << width << ", h=" << height << ", mx=" << lastPos.x() << ", my=" << lastPos.y() << "\n";
 	assert(pbo_dptr);
 	if (painter()->getWidth() != width || painter()->getHeight() != height)
 		painter()->setDimensions(width, height, pbo_dptr);

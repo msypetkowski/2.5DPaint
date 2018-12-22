@@ -1,10 +1,10 @@
 #include "cpu_painter.h"
 
 #include <iostream>
+#include <chrono>
 
 #include <QtMath>
 #include <QVector3D>
-#include <QElapsedTimer>
 #include <helper_math.h>
 
 #include "helper_cuda.h"
@@ -31,7 +31,7 @@ void CPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
 
     int buf_size = w * h;
 
-    printf("init/resize cpu buffers (%d, %d)\n", w, h);
+    printf("[CPU] init/resize cpu buffers (%d, %d)\n", w, h);
     buffer.resize(buf_size);
     bufferColor.resize(buf_size);
     bufferHeight.resize(buf_size);
@@ -74,7 +74,7 @@ void CPUPainter::updatePainted(int mx, int my) {
 void CPUPainter::brushTextured(int mx, int my) {
     qreal maxRadius = brushSettings.size / 2;
     if (color_image.isNull() || height_image.isNull()) {
-        std::clog << "No texture set\n";
+        std::clog << "[CPU] No texture set\n";
         return;
     }
     for (int x = mx - maxRadius + 1; x < mx + maxRadius; ++x) {
@@ -116,7 +116,7 @@ void CPUPainter::setBrushType(BrushType type) {
             paint_function = std::bind(&CPUPainter::brushTextured, this, _1, _2);
             break;
         case BrushType::Third:
-            std::clog << "Warning: chose unused brush\n";
+            std::clog << "[CPU] Warning: chose unused brush\n";
             break;
         default:
             throw std::runtime_error("Invalid brush type: "
@@ -125,24 +125,21 @@ void CPUPainter::setBrushType(BrushType type) {
 }
 
 void CPUPainter::doPainting(int x, int y, uchar4 *pbo) {
-    QElapsedTimer performanceTimer;
     const auto buf_size = w * h * sizeof(uchar4);
 
-    //TODO: leaving it here, this logic used to be in previewGLWidget, although I don't know why
-    //performanceTimer.restart();
-    //checkCudaErrors(cudaMemcpy(&buffer[0], pbo, buf_size, cudaMemcpyDeviceToHost));
-    //const auto memcpy_d2h = performanceTimer.nsecsElapsed();
-
-    performanceTimer.restart();
+    auto start_time = std::chrono::steady_clock::now();
     paint_function(x, y);
-    const auto painting_duration = performanceTimer.nsecsElapsed();
+    const auto painting_duration = (float)std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now() - start_time).count() / (float)1e6;
 
-    performanceTimer.restart();
+    start_time = std::chrono::steady_clock::now();
     checkCudaErrors(cudaMemcpy(pbo, &buffer[0], buf_size, cudaMemcpyHostToDevice));
-    const auto memcpy_h2d = performanceTimer.nsecsElapsed();
+    const auto memcpy_h2d = (float)std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now() - start_time).count() / (float)1e6;
 
-    std::clog << "Painting: " << painting_duration / 1e6f << "ms\n";
-    std::clog << "Copying: " << memcpy_h2d / 1e6f << "ms\n";
+    std::clog << "[CPU] Painting time: " << painting_duration << " ms\n";
+    std::clog << "[CPU] Copying pbo (host -> device): " << memcpy_h2d << " ms\n";
+    std::clog << "[CPU] Sum: " << (memcpy_h2d + painting_duration) << " ms\n";
 }
 
 void CPUPainter::updateBuffer(uchar4 *pbo) {

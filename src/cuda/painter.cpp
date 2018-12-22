@@ -20,11 +20,7 @@ std::unique_ptr<Painter> Painter::make_painter(bool is_gpu) {
 }
 
 void Painter::paint(int x, int y, uchar4 *pbo) {
-    QElapsedTimer performanceTimer;
-    performanceTimer.restart();
     doPainting(x, y, pbo);
-    const auto elapsed_time = performanceTimer.nsecsElapsed();
-    std::clog << "Time netto: " << elapsed_time / 1e6f << "ms\n";
 }
 
 int Painter::getBufferIndex(int x, int y) {
