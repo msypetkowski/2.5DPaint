@@ -2,6 +2,9 @@
 
 declare -a generate_files=(
   "./CMakeCache.txt"
+  "./cmake-build-release"
+  "./cmake-build-debug"
+  "2.5DPaint.cbp"
   "./CMakeFiles"
   "./Makefile"
   "./build"

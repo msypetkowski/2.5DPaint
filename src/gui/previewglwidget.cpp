@@ -37,6 +37,9 @@ PreviewGLWidget::~PreviewGLWidget()
 	deletePBO();
 
 	doneCurrent();
+
+	// init cuda
+    checkCudaErrors(cudaSetDevice(0));
 }
 
 QString PreviewGLWidget::getGLinfo() {

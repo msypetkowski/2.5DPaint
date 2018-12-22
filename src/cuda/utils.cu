@@ -11,7 +11,7 @@ float3 interpolate_color(float3 oldColor, float strength, const float3& newColor
 
 float cosine_fallof(float val, float falloff) {
     val = powf(val, falloff);
-    return (cosf(val  * M_PI) + 1.0f) * 0.5f;
+    return (cosf(val  * (float)M_PI) + 1.0f) * 0.5f;
 }
 
 

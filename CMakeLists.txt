@@ -54,8 +54,8 @@ file(GLOB_RECURSE PROJECT_SRCS
     "${SRC_DIR}/*.c"
 
 	"${CUDA_SRC_DIR}/*.cu"
-        "${CUDA_SRC_DIR}/*.cpp"
-        "${CUDA_SRC_DIR}/*.cuh"
+    "${CUDA_SRC_DIR}/*.cpp"
+    "${CUDA_SRC_DIR}/*.cuh"
 	"${CUDA_SRC_DIR}/*.h"
 )
 
@@ -81,7 +81,7 @@ find_package(CUDA REQUIRED)
 
 set(CUDA_GENERATED_OUTPUT_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 set(CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE ON)
-set(CUDA_SEPARABLE_COMPILATION OFF)
+set(CUDA_SEPARABLE_COMPILATION ON)
 set(CUDA_VERBOSE_BUILD ON)
 
 # include cuda samples headers

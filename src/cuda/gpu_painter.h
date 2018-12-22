@@ -5,8 +5,8 @@
 #include "painter.h"
 
 #include "cuda_runtime.h"
+#include "../kernel_params.h"
 
-void setupCuda();
 
 class GPUPainter : public Painter {
 public:
@@ -23,10 +23,5 @@ public:
 private:
 	void doPainting(int x, int y, uchar4 *pbo) override;
 
-    int color_image_width, color_image_height, height_image_height, height_image_width;
-    unsigned char* d_color_texture = nullptr;
-    unsigned char* d_height_texture = nullptr;
-	int color_image_bytes_per_pixel;
-	int height_image_bytes_per_pixel;
-
+	KernelArgs args;
 };

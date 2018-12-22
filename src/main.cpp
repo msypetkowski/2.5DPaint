@@ -1,11 +1,9 @@
 #include "mainwindow.h"
 #include <QApplication>
-#include "gpu_painter.h"
+
 
 int main(int argc, char *argv[])
 {
-	setupCuda();
-
     QApplication a(argc, argv);
     MainWindow w;
     w.show();
