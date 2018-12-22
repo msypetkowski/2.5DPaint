@@ -260,7 +260,7 @@ void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
 
 void GPUPainter::brushBasic(int mx, int my) {
 
-    // @ TODO compute cuda time
+    // @ TODO compute real cuda time
     brushBasic_GPU_KERNEL <<< args.blocksPerGrid, args.blockSize >>>(mx, my, brushSettings, args);
     updateDisplay_GPU_KERNEL <<< args.blocksPerGrid, args.blockSize >>>(mx, my, brushSettings, args);
     checkCudaErrors(cudaDeviceSynchronize());

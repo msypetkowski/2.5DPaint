@@ -33,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	enableCuda();
 	updateSettings();
+    updateBrushType();
 }
 
 MainWindow::~MainWindow()
@@ -60,6 +61,9 @@ void MainWindow::updateBrushType()
 		+ (ui->texturedBrush->isChecked() ? static_cast<int>(BrushType::Textured) : 0)
 	    + (ui->radioButton_3->isChecked() ? static_cast<int>(BrushType::Third) : 0);
 	ui->openGLWidget->setBrushType(static_cast<BrushType>(brush_id));
+
+    ui->colorChooseButton->setDisabled(brush_id != static_cast<const int>(BrushType::Textured));
+    ui->heightChooseButton->setDisabled(brush_id != static_cast<const int>(BrushType::Textured));
 }
 
 void MainWindow::enableCuda() {
@@ -81,7 +85,9 @@ void MainWindow::setHeightTexture()
 void MainWindow::browseFilesFor(QLabel *what)
 {
     const auto file = QFileDialog::getOpenFileName(this, tr("Choose Texture"), QDir::currentPath());
-	const auto filename = QFileInfo(file).fileName();
-	what->setText("Chosen texture: " + filename);
-	ui->openGLWidget->setTexture(what->objectName(), file);
+    if (!file.isNull()) {
+        const auto filename = QFileInfo(file).fileName();
+        what->setText(filename);
+        ui->openGLWidget->setTexture(what->objectName(), file);
+    }
 }

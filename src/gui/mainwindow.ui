@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>773</width>
-    <height>496</height>
+    <height>528</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -48,7 +48,7 @@
      <x>0</x>
      <y>0</y>
      <width>773</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -93,7 +93,7 @@
      <item>
       <widget class="QGroupBox" name="groupBox">
        <property name="title">
-        <string>Brush types (TODO)</string>
+        <string>Brush type</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
@@ -102,7 +102,7 @@
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
           <property name="text">
-           <string>Default</string>
+           <string>Basic</string>
           </property>
           <property name="checked">
            <bool>true</bool>
@@ -121,37 +121,6 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="heightChooseButton">
-            <property name="text">
-             <string>Height Texture</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="colorChooseButton">
-            <property name="text">
-             <string>Color Texture</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="colorFilename">
-            <property name="text">
-             <string>Chosen texture:</string>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLabel" name="heightFilename">
-            <property name="text">
-             <string>Chosen texture:</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
         <item>
@@ -160,7 +129,7 @@
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
           <property name="text">
-           <string>brush 2</string>
+           <string>Mean (@todo)</string>
           </property>
          </widget>
         </item>
@@ -176,7 +145,7 @@
         <item>
          <widget class="QLabel" name="label_4">
           <property name="text">
-           <string>Color</string>
+           <string>Color RGB</string>
           </property>
          </widget>
         </item>
@@ -228,7 +197,7 @@
           <item>
            <widget class="QLabel" name="label">
             <property name="text">
-             <string>Color pressure</string>
+             <string>Color pressure:</string>
             </property>
            </widget>
           </item>
@@ -252,7 +221,7 @@
           <item>
            <widget class="QLabel" name="label_3">
             <property name="text">
-             <string>Height pressure</string>
+             <string>Height pressure:</string>
             </property>
            </widget>
           </item>
@@ -317,6 +286,59 @@
             </property>
             <property name="value">
              <double>1.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="Line" name="line">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>Textures</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_7">
+          <item>
+           <widget class="QPushButton" name="colorChooseButton">
+            <property name="text">
+             <string>Color Texture</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="colorFilename">
+            <property name="text">
+             <string>None</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_8">
+          <item>
+           <widget class="QPushButton" name="heightChooseButton">
+            <property name="text">
+             <string>Height Texture</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="heightFilename">
+            <property name="text">
+             <string>None</string>
             </property>
            </widget>
           </item>
