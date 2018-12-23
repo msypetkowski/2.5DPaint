@@ -11,12 +11,6 @@
 #include "utils.h"
 
 
-std::pair<int, int> get_coords(const QImage &image, int x, int y, int w, int h) {
-    const auto pixel_x = int(x / float(w) * image.width());
-    const auto pixel_y = int(y / float(w) * image.height());
-    return {pixel_x, pixel_y};
-}
-
 bool CPUPainter::inBounds(int x, int y) {
     return x >= 0 && x < w && y >= 0 && y < h;
 }
@@ -59,35 +53,6 @@ int CPUPainter::getBufferIndex(int x, int y) {
     return w - 1 - x + (y * w);
 }
 
-void CPUPainter::updateWholeDisplay() {
-    for (int x = 0; x < w; ++x) {
-        for (int y = 0; y < h; ++y) {
-            int i = getBufferIndex(x, y);
-
-            auto normal = getNormal(x, y);
-
-            float3 lighting = normalize(make_float3(0.07f, 0.07f, 1.0f));
-
-            // TODO: use lighting vector here
-            float shadow = normal.z * 0.80f - normal.x * 0.1f - normal.y * 0.1f + (sampleHeight(x, y)) / 4.0f;
-            shadow = clamp(shadow, 0.0f, 1.0f);
-
-            float specular = 1.0f - length(normal - lighting);
-            specular = powf(specular, 8.0f);
-            specular = clamp(specular, 0.0f, 1.0f);
-
-            float3 color = lerp(buffer_color[i] * shadow, make_float3(255, 255, 255), specular);
-
-            // view normals (TODO: remove or make normals visualization feature)
-            /*color.x = normal.x * 255.0 / 2 + 255.0 / 2;
-            color.y = normal.y * 255.0 / 2 + 255.0 / 2;
-            color.z = normal.z * 255;*/
-            //color = clamp(color, make_float3(0.0f), make_float3(255.0f));
-            buffer_pbo[i] = make_uchar4(color.x, color.y, color.z, 0);
-        }
-    }
-}
-
 void CPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     w = w1;
     h = h1;
@@ -119,97 +84,6 @@ void CPUPainter::clearImage(float3 color, float height) {
     std::clog << "[CPU] Clear image\n";
 }
 
-void CPUPainter::brushBasic(int mx, int my) {
-    float brush_radius = brushSettings.size / 2.0f;
-    for (int x = mx - brush_radius + 1; x < mx + brush_radius; ++x) {
-        for (int y = my - brush_radius + 1; y < my + brush_radius; ++y) {
-            if (!inBounds(x, y))
-                continue;
-            float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
-            if (radius > brush_radius) {
-                continue;
-            }
-            int i = getBufferIndex(x, y);
-
-            // paint color
-            float strength = brushSettings.pressure * cosine_fallof(radius / brush_radius, brushSettings.falloff);
-            float3 color = interpolate_color(buffer_color[i], strength, brushSettings.color);
-            buffer_color[i] = color;
-
-            // paint height
-            strength = brushSettings.heightPressure * cosine_fallof(radius / brush_radius, brushSettings.falloff);
-            buffer_height[i] = clamp(buffer_height[i] + strength, -1.0f, 1.0f);
-        }
-    }
-    updatePainted(mx, my);
-}
-
-void CPUPainter::updatePainted(int mx, int my) {
-    qreal maxRadius = brushSettings.size / 2;
-    for (int x = mx - maxRadius + 1; x < mx + maxRadius; ++x) {
-        for (int y = my - maxRadius + 1; y < my + maxRadius; ++y) {
-            if (!inBounds(x, y))
-                continue;
-            int i = getBufferIndex(x, y);
-
-            auto normal = getNormal(x, y);
-
-            float3 lighting = normalize(make_float3(0.07f, 0.07f, 1.0f));
-
-            // TODO: use lighting vector here
-            float shadow = normal.z * 0.80f - normal.x * 0.1f - normal.y * 0.1f + (sampleHeight(x, y)) / 4.0f;
-            shadow = clamp(shadow, 0.0f, 1.0f);
-
-            float specular = 1.0f - length(normal - lighting);
-            specular = powf(specular, 8.0f);
-            specular = clamp(specular, 0.0f, 1.0f);
-
-            float3 color = lerp(buffer_color[i] * shadow, make_float3(255, 255, 255), specular);
-
-            // view normals (TODO: remove or make normals visualization feature)
-            /*color.x = normal.x * 255.0 / 2 + 255.0 / 2;
-            color.y = normal.y * 255.0 / 2 + 255.0 / 2;
-            color.z = normal.z * 255;*/
-            //color = clamp(color, make_float3(0.0f), make_float3(255.0f));
-            buffer_pbo[i] = make_uchar4(color.x, color.y, color.z, 0);
-        }
-    }
-}
-
-void CPUPainter::brushTextured(int mx, int my) {
-    qreal maxRadius = brushSettings.size / 2;
-    if (color_image.isNull() || height_image.isNull()) {
-        std::clog << "[CPU] No texture set\n";
-        return;
-    }
-    for (int x = mx - maxRadius + 1; x < mx + maxRadius; ++x) {
-        for (int y = my - maxRadius + 1; y < my + maxRadius; ++y) {
-            if (!inBounds(x, y))
-                continue;
-            qreal radius = qSqrt((x - mx) * (x - mx) + (y - my) * (y - my));
-            if (radius > maxRadius) {
-                continue;
-            }
-            int i = getBufferIndex(x, y);
-
-            qreal strength = brushSettings.pressure * cosine_fallof(radius / maxRadius, brushSettings.falloff);
-            const auto color_coords =
-                    get_coords(color_image, x - mx + maxRadius, y - my + maxRadius, maxRadius * 2, maxRadius * 2);
-            const auto pixel = color_image.pixel(color_coords.first, color_coords.second);
-            buffer_color[i] = interpolate_color(
-                    buffer_color[i],
-                    strength,
-                    make_float3(qRed(pixel), qGreen(pixel), qBlue(pixel)));
-
-            const auto height_coords =
-                    get_coords(height_image, x - mx + maxRadius, y - my + maxRadius, maxRadius * 2, maxRadius * 2);
-            const auto height = qRed(height_image.pixel(height_coords.first, height_coords.second)) * 0.001f;
-            strength = brushSettings.heightPressure * height * cosine_fallof(radius / maxRadius, brushSettings.falloff);
-            bufferHeight[i] = qBound(-1.0, bufferHeight[i] + strength, 1.0);
-        }
-    }
-    updatePainted(mx, my);
-}
 
 void CPUPainter::setBrushType(BrushType type) {
     using namespace std::placeholders;
@@ -276,4 +150,148 @@ const QImage &CPUPainter::getTexture(const QString &type) const {
         return height_image;
     }
 }
+
+/**********************************************************************************************************************/
+/*
+ * Brush functions
+ */
+
+void CPUPainter::brushBasic(int mx, int my) {
+    float brush_radius = brushSettings.size / 2.0f;
+    for (int x = mx - brush_radius + 1; x < mx + brush_radius; ++x) {
+        for (int y = my - brush_radius + 1; y < my + brush_radius; ++y) {
+            if (!inBounds(x, y))
+                continue;
+            float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
+            if (radius > brush_radius) {
+                continue;
+            }
+            int i = getBufferIndex(x, y);
+
+            // paint color
+            float strength = brushSettings.pressure * cosine_fallof(radius / brush_radius, brushSettings.falloff);
+            float3 color = interpolate_color(buffer_color[i], strength, brushSettings.color);
+            buffer_color[i] = color;
+
+            // paint height
+            strength = brushSettings.heightPressure * cosine_fallof(radius / brush_radius, brushSettings.falloff);
+            buffer_height[i] = clamp(buffer_height[i] + strength, -1.0f, 1.0f);
+        }
+    }
+    updatePainted(mx, my);
+}
+
+void CPUPainter::brushTextured(int mx, int my) {
+    float maxRadius = brushSettings.size / 2;
+
+    if (color_image.isNull() || height_image.isNull()) {
+        std::clog << "[CPU] No texture set\n";
+        return;
+    }
+
+    for (int x = mx - maxRadius + 1; x < mx + maxRadius; ++x) {
+        for (int y = my - maxRadius + 1; y < my + maxRadius; ++y) {
+
+            if (!inBounds(x, y))
+                continue;
+
+            float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
+
+            if (radius > maxRadius) {
+                continue;
+            }
+            int i = getBufferIndex(x, y);
+
+            float strength = brushSettings.pressure * cosine_fallof(radius / maxRadius, brushSettings.falloff);
+
+            const auto color_coords = get_coords(x - mx + maxRadius,
+                                                 y - my + maxRadius,
+                                                 brushSettings.size,
+                                                 brushSettings.size,
+                                                 color_image.width(),
+                                                 color_image.height());
+
+            const auto pixel = color_image.pixel(color_coords.x, color_coords.y);
+
+            buffer_color[i] = interpolate_color(buffer_color[i],
+                                                strength,
+                                                make_float3(qRed(pixel), qGreen(pixel), qBlue(pixel)));
+
+            const auto height_coords = get_coords(x - mx + maxRadius,
+                                                  y - my + maxRadius,
+                                                  brushSettings.size,
+                                                  brushSettings.size,
+                                                  height_image.width(),
+                                                  height_image.height());
+
+            const auto height = qRed(height_image.pixel(height_coords.x, height_coords.y)) * 0.001f;
+
+            strength = brushSettings.heightPressure * height * cosine_fallof(radius / maxRadius, brushSettings.falloff);
+
+            bufferHeight[i] = clamp(bufferHeight[i] + strength, -1.0f, 1.0f);
+        }
+    }
+    updatePainted(mx, my);
+}
+
+/*
+ * Function used for shading pixels for display, updates only square painted piece of image affected by brush
+ */
+void CPUPainter::updatePainted(int mx, int my) {
+    float maxRadius = brushSettings.size / 2;
+    for (int x = mx - maxRadius + 1; x < mx + maxRadius; ++x) {
+        for (int y = my - maxRadius + 1; y < my + maxRadius; ++y) {
+            updatePixelDisplay(x, y);
+        }
+    }
+}
+
+/*
+ * Function shades all pixels on the screen
+ */
+void CPUPainter::updateWholeDisplay() {
+    for (int x = 0; x < w; ++x) {
+        for (int y = 0; y < h; ++y) {
+            updatePixelDisplay(x, y);
+        }
+    }
+}
+
+/*
+ * Function shades single display pixel
+ */
+void CPUPainter::updatePixelDisplay(int x, int y) {
+    if (!inBounds(x, y))
+        return;
+    int i = getBufferIndex(x, y);
+
+    auto normal = getNormal(x, y);
+
+    float3 color;
+
+    if (!brushSettings.renderNormals) {
+        float3 lighting = normalize(make_float3(0.07f, 0.07f, 1.0f));
+
+        // TODO: use lighting vector here
+        float shadow = normal.z * 0.80f - normal.x * 0.1f - normal.y * 0.1f + (sampleHeight(x, y)) / 4.0f;
+        shadow = clamp(shadow, 0.0f, 1.0f);
+
+        float specular = 1.0f - length(normal - lighting);
+        specular = powf(specular, 8.0f);
+        specular = clamp(specular, 0.0f, 1.0f);
+
+        color = lerp(buffer_color[i] * shadow, make_float3(255, 255, 255), specular);
+    } else {
+        // view normals
+        color.x = normal.x * 255.0 / 2 + 255.0 / 2;
+        color.y = normal.y * 255.0 / 2 + 255.0 / 2;
+        color.z = normal.z * 255;
+        color = clamp(color, make_float3(0.0f), make_float3(255.0f));
+    }
+
+    buffer_pbo[i] = make_uchar4(color.x, color.y, color.z, 0);
+}
+
+
+
 

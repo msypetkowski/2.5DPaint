@@ -40,6 +40,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	assert(connect(ui->actionClear, SIGNAL(triggered()), this, SLOT(clearImage())));
 	assert(connect(ui->clearBtn, SIGNAL(clicked(bool)), this, SLOT(clearImage())));
 
+	assert(connect(ui->normalCheckbox, SIGNAL(clicked(bool)), this, SLOT(updateSettings())));
+
 	enableCuda();
 	updateSettings();
     updateBrushType();
@@ -61,6 +63,8 @@ void MainWindow::updateSettings()
 	brushSettings.color.x = ui->colorR->value() * 255;
 	brushSettings.color.y = ui->colorG->value() * 255;
 	brushSettings.color.z = ui->colorB->value() * 255;
+
+	brushSettings.renderNormals = ui->normalCheckbox->isChecked();
 
 	ui->openGLWidget->setBrushSettings(brushSettings);
 }

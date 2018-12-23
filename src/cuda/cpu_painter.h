@@ -19,6 +19,7 @@ public:
 	void setBrushType(BrushType type) override;
 
 	void updateWholeDisplay();
+	void updatePixelDisplay(int x, int y);
 
 	void setTexture(const QString& type, const QString& path);
 	const QImage& getTexture(const QString& type) const;

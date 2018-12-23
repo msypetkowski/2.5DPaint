@@ -13,6 +13,7 @@ public:
 	~GPUPainter() override {}
 
 	void setDimensions(int w, int h, uchar4 *pbo) override;
+	void updateWholeDisplay();
 	void setBrushType(BrushType type) override;
 	void setTexture(const std::string& type, const unsigned char *data, int width, int height, int bytes_per_pixel);
 

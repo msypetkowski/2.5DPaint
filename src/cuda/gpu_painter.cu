@@ -119,7 +119,7 @@ bool __device__ inBounds(int x, int y, int w, int h) {
 
 int __device__ getBufferIndex(int x, int y, int w) { return (w - 1 - x + (y * w)); };
 
-int __device__ getTextureByteIndex(int x, int y, int h, int w, int bpp) { return (w * bpp) * y + x * bpp; };
+int __device__ getTextureByteIndex(int x, int y, int w, int h, int bpp) { return (w * bpp) * y + x * bpp; };
 
 float __device__ sampleHeight(int x, int y, const KernelArgs &args) {
     x = clamp(x, 0, args.w - 1);
@@ -151,12 +151,6 @@ float3 __device__ getNormal(int x, int y, const KernelArgs &args) {
 
     auto ret = make_float3(dx, dy, sqrtf(clamp(1.0f - dx * dx - dy * dy, 0.0f, 1.0f)));
     return normalize(ret);
-}
-
-int2 __device__ get_coords(int x, int y, int w, int h, int width, int height) {
-    const auto pixel_x = int(x / float(w) * width);
-    const auto pixel_y = int(y / float(w) * height);
-    return make_int2(pixel_x, pixel_y);
 }
 
 
@@ -210,18 +204,41 @@ void brushTextured_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
         int i = getBufferIndex(x, y, args.w);
 
         float strength = bs.pressure * cosine_fallof(radius / brush_radius, bs.falloff);
-        const auto color_coords = get_coords(x - mx + brush_radius, y - my + brush_radius, brush_radius * 2,
-                                             brush_radius * 2, args.ctex_width, args.ctex_height);
-        const auto pixel = getTextureByteIndex(color_coords.x, color_coords.y, args.ctex_width, args.ctex_height,
-                                               args.ctex_bpp);
-        args.buff_color_dptr[i] = interpolate_color(
-                args.buff_color_dptr[i],
-                strength,
-                make_float3(args.ctex_dptr[pixel], args.ctex_dptr[pixel + 1], args.ctex_dptr[pixel + 2]));
 
-        const auto height_coords = get_coords(x - mx + brush_radius, y - my + brush_radius, brush_radius * 2,
-                                              brush_radius * 2, args.htex_width, args.htex_height);
-        const auto height = args.htex_dptr[getTextureByteIndex(height_coords.x, height_coords.y, args.htex_width, args.htex_height, args.htex_bpp)] * 0.001f;
+        // color texture
+        const auto color_coords = get_coords(x - mx + brush_radius,
+                                             y - my + brush_radius,
+                                             bs.size,
+                                             bs.size,
+                                             args.ctex_width,
+                                             args.ctex_height);
+
+        const auto pixel = getTextureByteIndex( color_coords.x,
+                                                color_coords.y,
+                                                args.ctex_width,
+                                                args.ctex_height,
+                                                args.ctex_bpp);
+
+        args.buff_color_dptr[i] = interpolate_color(args.buff_color_dptr[i],
+                                                    strength,
+                                                    make_float3(args.ctex_dptr[pixel],
+                                                                args.ctex_dptr[pixel + 1],
+                                                                args.ctex_dptr[pixel + 2]));
+
+        // height texture
+        const auto height_coords = get_coords(  x - mx + brush_radius,
+                                                y - my + brush_radius,
+                                                bs.size,
+                                                bs.size,
+                                                args.htex_width,
+                                                args.htex_height);
+
+        const auto height = args.htex_dptr[getTextureByteIndex(height_coords.x,
+                                           height_coords.y,
+                                           args.htex_width,
+                                           args.htex_height,
+                                           args.htex_bpp)] * 0.001f;
+
         strength = bs.heightPressure * height * cosine_fallof(radius / brush_radius, bs.falloff);
         args.buff_height_dptr[i] = clamp(args.buff_height_dptr[i] + strength, -1.0f, 1.0f);
     }
@@ -239,32 +256,40 @@ void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
     int x = (blockIdx.x * blockDim.x) + threadIdx.x;
     int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 
+    bool update_whole_display = mx == -1 && my == -1;
+
     float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
     float brush_radius = bs.size / 2.0f;
 
-    if (radius < brush_radius && inBounds(x, y, args.w, args.h)) {
+    if ((radius < brush_radius || update_whole_display) && inBounds(x, y, args.w, args.h)) {
         // shading pixels
         int i = getBufferIndex(x, y, args.w);
 
         auto normal = getNormal(x, y, args);
 
-        float3 lighting = normalize(make_float3(0.07f, 0.07f, 1.0f));
+        float3 color;
 
-        // TODO: use lighting vector here
-        float shadow = normal.z * 0.80f - normal.x * 0.1f - normal.y * 0.1f + (sampleHeight(x, y, args)) / 4.0f;
-        shadow = clamp(shadow, 0.0f, 1.0f);
+        if (!bs.renderNormals) {
 
-        float specular = 1.0f - length(normal - lighting);
-        specular = powf(specular, 8.0f);
-        specular = clamp(specular, 0.0f, 1.0f);
+            float3 lighting = normalize(make_float3(0.07f, 0.07f, 1.0f));
 
-        float3 color = lerp(args.buff_color_dptr[i] * shadow, make_float3(255.0f), specular);
+            // TODO: use lighting vector here
+            float shadow = normal.z * 0.80f - normal.x * 0.1f - normal.y * 0.1f + (sampleHeight(x, y, args)) / 4.0f;
+            shadow = clamp(shadow, 0.0f, 1.0f);
 
-        // view normals (TODO: remove or make normals visualization feature)
-        /*color.x = normal.x * 255.0 / 2 + 255.0 / 2;
-        color.y = normal.y * 255.0 / 2 + 255.0 / 2;
-        color.z = normal.z * 255;*/
-        //color = clamp(color, make_float3(0.0f), make_float3(255.0f));
+            float specular = 1.0f - length(normal - lighting);
+            specular = powf(specular, 8.0f);
+            specular = clamp(specular, 0.0f, 1.0f);
+
+            color = lerp(args.buff_color_dptr[i] * shadow, make_float3(255.0f), specular);
+        } else {
+            // view normals
+            color.x = normal.x * 255.0 / 2 + 255.0 / 2;
+            color.y = normal.y * 255.0 / 2 + 255.0 / 2;
+            color.z = normal.z * 255;
+            color = clamp(color, make_float3(0.0f), make_float3(255.0f));
+        }
+
         args.pbo[i] = make_uchar4(color.x, color.y, color.z, 0);
     }
 }
@@ -293,6 +318,11 @@ void GPUPainter::brushTextured(int mx, int my) {
 
     brushTextured_GPU_KERNEL << < args.blocksPerGrid, args.blockSize >> >(mx, my, brushSettings, args);
     updateDisplay_GPU_KERNEL << < args.blocksPerGrid, args.blockSize >> >(mx, my, brushSettings, args);
+    checkCudaErrors(cudaDeviceSynchronize());
+}
+
+void GPUPainter::updateWholeDisplay() {
+    updateDisplay_GPU_KERNEL << < args.blocksPerGrid, args.blockSize >> >(-1, -1, brushSettings, args);
     checkCudaErrors(cudaDeviceSynchronize());
 }
 

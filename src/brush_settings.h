@@ -9,4 +9,6 @@ struct BrushSettings {
 	float size;
 	float falloff;
 	float3 color;
+
+	bool renderNormals = false;
 };

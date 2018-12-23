@@ -18,3 +18,9 @@ float cosine_fallof(float val, float falloff) {
 float normal_from_delta(float dx) {
     return dx / sqrtf(dx * dx + 1);
 }
+
+int2 get_coords(int x, int y, int w, int h, int width, int height) {
+    const auto pixel_x = int(x / float(w) * width);
+    const auto pixel_y = int(y / float(w) * height);
+    return make_int2(pixel_x, pixel_y);
+}

@@ -301,7 +301,11 @@ void PreviewGLWidget::clearImage() {
 
     cpu->clear();
     gpu->clear();
-    cpu->updateWholeDisplay();
-    cpu->sendBufferToDevice(pbo_dptr);
+    if (cuda_enabled) {
+        gpu->updateWholeDisplay();
+    } else {
+        cpu->updateWholeDisplay();
+        cpu->sendBufferToDevice(pbo_dptr);
+    }
     update();
 }

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>773</width>
-    <height>572</height>
+    <height>603</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -309,6 +309,13 @@
            </widget>
           </item>
          </layout>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="normalCheckbox">
+          <property name="text">
+           <string>Show normal vectors only</string>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="Line" name="line">
