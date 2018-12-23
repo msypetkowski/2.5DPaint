@@ -34,6 +34,8 @@ void GPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     args.buff_color_dptr = buffer_color;
     args.buff_height_dptr = buffer_height;
 
+    args.light_direction = lightDirection;
+
     // set cuda kernels launch params
     const int blockSideLength = 32;
 
@@ -127,7 +129,7 @@ float __device__ sampleHeight(int x, int y, const KernelArgs &args) {
     return args.buff_height_dptr[getBufferIndex(x, y, args.w)];
 }
 
-float3 __device__ getNormal(int x, int y, const KernelArgs &args) {
+float3 __device__ getNormal(int x, int y, float bending, const KernelArgs &args) {
     float dx = 0.0f, dy = 0.0f;
 
     auto mid = sampleHeight(x, y, args);
@@ -143,13 +145,13 @@ float3 __device__ getNormal(int x, int y, const KernelArgs &args) {
     dy -= normal_from_delta(mid - bottom) / 2;
 
     // TODO: make parameter or constant
-    dx *= 100;
-    dy *= 100;
+    dx *= bending;
+    dy *= bending;
 
     dx = dx / sqrtf(dx * dx + dy * dy + 1);
     dy = dy / sqrtf(dx * dx + dy * dy + 1);
 
-    auto ret = make_float3(dx, dy, sqrtf(clamp(1.0f - dx * dx - dy * dy, 0.0f, 1.0f)));
+    auto ret = make_float3(dx, dy, sqrtf(fabsf(1.0f - dx * dx - dy * dy)));
     return normalize(ret);
 }
 
@@ -265,16 +267,15 @@ void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
         // shading pixels
         int i = getBufferIndex(x, y, args.w);
 
-        auto normal = getNormal(x, y, args);
+        auto normal = getNormal(x, y, bs.normalBending, args);
 
         float3 color;
 
         if (!bs.renderNormals) {
 
-            float3 lighting = normalize(make_float3(0.07f, 0.07f, 1.0f));
+            float3 lighting = normalize(args.light_direction);
 
-            // TODO: use lighting vector here
-            float shadow = normal.z * 0.80f - normal.x * 0.1f - normal.y * 0.1f + (sampleHeight(x, y, args)) / 4.0f;
+            float shadow = fabsf(dot(lighting, normal));
             shadow = clamp(shadow, 0.0f, 1.0f);
 
             float specular = 1.0f - length(normal - lighting);
@@ -287,9 +288,8 @@ void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
             color.x = normal.x * 255.0 / 2 + 255.0 / 2;
             color.y = normal.y * 255.0 / 2 + 255.0 / 2;
             color.z = normal.z * 255;
-            color = clamp(color, make_float3(0.0f), make_float3(255.0f));
         }
-
+        color = clamp(color, make_float3(0.0f), make_float3(255.0f));
         args.pbo[i] = make_uchar4(color.x, color.y, color.z, 0);
     }
 }

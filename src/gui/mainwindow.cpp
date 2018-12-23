@@ -41,6 +41,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	assert(connect(ui->clearBtn, SIGNAL(clicked(bool)), this, SLOT(clearImage())));
 
 	assert(connect(ui->normalCheckbox, SIGNAL(clicked(bool)), this, SLOT(updateSettings())));
+	assert(connect(ui->normalBend, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
 
 	enableCuda();
 	updateSettings();
@@ -65,6 +66,7 @@ void MainWindow::updateSettings()
 	brushSettings.color.z = ui->colorB->value() * 255;
 
 	brushSettings.renderNormals = ui->normalCheckbox->isChecked();
+	brushSettings.normalBending = ui->normalBend->value();
 
 	ui->openGLWidget->setBrushSettings(brushSettings);
 }

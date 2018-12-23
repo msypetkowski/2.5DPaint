@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <functional>
+#include <helper_math.h>
 
 #include "vector_functions.h"
 #include "../brush_settings.h"
@@ -30,6 +31,7 @@ protected:
 	BrushSettings brushSettings;
 
 	float3 backgroundColor = make_float3(125.0f, 125.0f, 125.0f);
+	float3 lightDirection = normalize(make_float3(-0.4f, -0.4f, 1.0f));
 
 	int w, h;
 

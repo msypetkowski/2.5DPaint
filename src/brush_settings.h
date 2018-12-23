@@ -11,4 +11,5 @@ struct BrushSettings {
 	float3 color;
 
 	bool renderNormals = false;
+	float normalBending = 100.0f; // normal bending parameter (see getNormal() function)
 };

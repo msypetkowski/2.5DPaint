@@ -22,7 +22,7 @@ float CPUPainter::sampleHeight(int x, int y) {
 }
 
 float3 CPUPainter::getNormal(int x, int y) {
-    float dx = 0, dy = 0;
+    float dx = 0.0f, dy = 0.0f;
 
     auto mid = sampleHeight(x, y);
     auto left = sampleHeight(x - 1, y);
@@ -36,16 +36,13 @@ float3 CPUPainter::getNormal(int x, int y) {
     dy += normal_from_delta(mid - top) / 2;
     dy -= normal_from_delta(mid - bottom) / 2;
 
-    // TODO: make parameter or constant
-    dx *= 100;
-    dy *= 100;
+    dx *= brushSettings.normalBending;
+    dy *= brushSettings.normalBending;
 
     dx = dx / sqrtf(dx * dx + dy * dy + 1);
     dy = dy / sqrtf(dx * dx + dy * dy + 1);
 
-    assert(fabsf(dx) <= 1);
-    assert(fabsf(dy) <= 1);
-    auto ret = make_float3(dx, dy, sqrtf(clamp(1.0f - dx * dx - dy * dy, 0.0f, 1.0f)));
+    auto ret = make_float3(dx, dy, sqrtf(fabsf(1.0f - dx * dx - dy * dy)));
     return normalize(ret);
 }
 
@@ -270,10 +267,10 @@ void CPUPainter::updatePixelDisplay(int x, int y) {
     float3 color;
 
     if (!brushSettings.renderNormals) {
-        float3 lighting = normalize(make_float3(0.07f, 0.07f, 1.0f));
+        float3 lighting = normalize(lightDirection);
 
         // TODO: use lighting vector here
-        float shadow = normal.z * 0.80f - normal.x * 0.1f - normal.y * 0.1f + (sampleHeight(x, y)) / 4.0f;
+        float shadow = fabsf(dot(normal, lighting));
         shadow = clamp(shadow, 0.0f, 1.0f);
 
         float specular = 1.0f - length(normal - lighting);
@@ -286,9 +283,9 @@ void CPUPainter::updatePixelDisplay(int x, int y) {
         color.x = normal.x * 255.0 / 2 + 255.0 / 2;
         color.y = normal.y * 255.0 / 2 + 255.0 / 2;
         color.z = normal.z * 255;
-        color = clamp(color, make_float3(0.0f), make_float3(255.0f));
     }
 
+    color = clamp(color, make_float3(0.0f), make_float3(255.0f));
     buffer_pbo[i] = make_uchar4(color.x, color.y, color.z, 0);
 }
 

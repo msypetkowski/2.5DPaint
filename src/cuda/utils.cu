@@ -16,7 +16,11 @@ float cosine_fallof(float val, float falloff) {
 
 
 float normal_from_delta(float dx) {
-    return dx / sqrtf(dx * dx + 1);
+    return dx / sqrtf(dx * dx + 1.0f);
+}
+
+float normal_z_from_delta(float dx) {
+    return 1.0f / sqrtf(dx * dx + 1.0f);
 }
 
 int2 get_coords(int x, int y, int w, int h, int width, int height) {

@@ -24,6 +24,7 @@ struct KernelArgs {
     unsigned char* ctex_dptr = nullptr; // color texture data global memory device pointer
     unsigned char* htex_dptr = nullptr; // height texture data global memory device pointer
 
+    float3 light_direction; // shading pixels light direction
 
     dim3 blockSize, blocksPerGrid; // cuda kernels launch parameters
 };

@@ -9,6 +9,9 @@ __host__ __device__
 float normal_from_delta(float dx);
 
 __host__ __device__
+float normal_z_from_delta(float dx);
+
+__host__ __device__
 float3 interpolate_color(float3 oldColor, float strength, const float3& newColor);
 
 __host__ __device__
