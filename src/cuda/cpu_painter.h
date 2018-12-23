@@ -23,7 +23,17 @@ public:
 	void setTexture(const QString& type, const QString& path);
 	const QImage& getTexture(const QString& type) const;
 
-	void updateBuffer(uchar4 *pbo);
+	void pullBufferFromDevice(uchar4 *pbo);
+	void sendBufferToDevice(uchar4 *pbo);
+	float* getHeightBuffer() {return buffer_height; }
+	float3* getColorBuffer() {return buffer_color; }
+	uchar4* getBuffer() {return buffer_pbo; }
+
+	int getBufferIndex(int x, int y);
+    float3 getNormal(int x, int y);
+    float sampleHeight(int x, int y);
+
+    bool inBounds(int x, int y);
 
 	// brush functions
 	void brushBasic(int mx, int my);
@@ -34,6 +44,7 @@ private:
 	void updatePainted(int mx, int my);
 
 	void doPainting(int x, int y, uchar4 *pbo) override;
+	void clearImage(float3 color, float height) override;
 
 	// textures
 	QImage color_image = QImage();

@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <vector>
 
 #include "cuda_runtime.h"
 #include "helper_cuda.h"
@@ -25,11 +26,10 @@ void GPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     if (buffer_height) { checkCudaErrors(cudaFree(buffer_height)); buffer_height = nullptr; }
 
     checkCudaErrors(cudaMalloc((void **) &buffer_height, buf_size * sizeof(float)));
-    checkCudaErrors(cudaMemset(buffer_height, 0, buf_size * sizeof(float)));
+    //checkCudaErrors(cudaMemset(buffer_height, 0, buf_size * sizeof(float)));
 
     checkCudaErrors(cudaMalloc((void **) &buffer_color, buf_size * sizeof(float3)));
-    // @ TODO init buffer with correct color
-    checkCudaErrors(cudaMemset(buffer_color, 0, buf_size * sizeof(float3)));
+    //checkCudaErrors(cudaMemset(buffer_color, 0, buf_size * sizeof(float3)));
 
     args.buff_color_dptr = buffer_color;
     args.buff_height_dptr = buffer_height;
@@ -39,6 +39,8 @@ void GPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
 
     args.blockSize = dim3(blockSideLength, blockSideLength);
     args.blocksPerGrid = dim3((w + args.blockSize.x - 1) / args.blockSize.x, (h + args.blockSize.y - 1) / args.blockSize.y);
+
+    Painter::clear();
 }
 
 void GPUPainter::setBrushType(BrushType type) {
@@ -90,6 +92,23 @@ void GPUPainter::doPainting(int x, int y, uchar4 *pbo) {
          (float)std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count() / (float)1e6 << " ms\n";
 }
 
+void GPUPainter::clearImage(float3 color, float height) {
+    std::vector<float> fillh(w * h);
+    std::fill(fillh.begin(), fillh.end(), height);
+
+    std::vector<float3> fillcol(w * h);
+    std::fill(fillcol.begin(), fillcol.end(), color);
+
+    if (args.buff_height_dptr != nullptr) {
+        checkCudaErrors(cudaMemcpy(args.buff_height_dptr, fillh.data(), w * h * sizeof(float), cudaMemcpyHostToDevice));
+    }
+    if (args.buff_color_dptr != nullptr) {
+        checkCudaErrors(cudaMemcpy(args.buff_color_dptr, fillcol.data(), w * h * sizeof(float3), cudaMemcpyHostToDevice));
+    }
+
+    std::clog << "[GPU] Clear image\n";
+}
+
 /**********************************************************************************************************************/
 /*
  * Kernels helper functions
@@ -133,11 +152,10 @@ float3 __device__ getNormal(int x, int y, const KernelArgs &args) {
     auto ret = make_float3(dx, dy, sqrtf(clamp(1.0f - dx * dx - dy * dy, 0.0f, 1.0f)));
     return normalize(ret);
 }
-// @TODO refactor
-int2 __device__ d_get_coords(int x, int y, int w, int h, int width, int height) {
+
+int2 __device__ get_coords(int x, int y, int w, int h, int width, int height) {
     const auto pixel_x = int(x / float(w) * width);
     const auto pixel_y = int(y / float(w) * height);
-    //int cord[] = { pixel_x, pixel_y };
     return make_int2(pixel_x, pixel_y);
 }
 
@@ -189,12 +207,11 @@ void brushTextured_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
     float brush_radius = bs.size / 2.0f;
 
     if (radius < brush_radius && inBounds(x, y, args.w, args.h)) {
-        float maxRadius = bs.size / 2.0f;
-
         int i = getBufferIndex(x, y, args.w);
 
-        float strength = bs.pressure * cosine_fallof(radius / maxRadius, bs.falloff);
-        const auto color_coords = d_get_coords(x - mx + maxRadius, y - my + maxRadius, maxRadius * 2, maxRadius * 2, args.ctex_width, args.ctex_height);
+        float strength = bs.pressure * cosine_fallof(radius / brush_radius, bs.falloff);
+        const auto color_coords = get_coords(x - mx + brush_radius, y - my + brush_radius, brush_radius * 2,
+                                             brush_radius * 2, args.ctex_width, args.ctex_height);
         const auto pixel = getTextureByteIndex(color_coords.x, color_coords.y, args.ctex_width, args.ctex_height,
                                                args.ctex_bpp);
         args.buff_color_dptr[i] = interpolate_color(
@@ -202,9 +219,10 @@ void brushTextured_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
                 strength,
                 make_float3(args.ctex_dptr[pixel], args.ctex_dptr[pixel + 1], args.ctex_dptr[pixel + 2]));
 
-        const auto height_coords = d_get_coords(x - mx + maxRadius, y - my + maxRadius, maxRadius * 2, maxRadius * 2, args.htex_width, args.htex_height);
-        const auto height = args.ctex_dptr[getTextureByteIndex(height_coords.x, height_coords.y, args.htex_width, args.htex_height, args.htex_bpp)] * 0.001f;
-        strength = bs.heightPressure * height * cosine_fallof(radius / maxRadius, bs.falloff);
+        const auto height_coords = get_coords(x - mx + brush_radius, y - my + brush_radius, brush_radius * 2,
+                                              brush_radius * 2, args.htex_width, args.htex_height);
+        const auto height = args.htex_dptr[getTextureByteIndex(height_coords.x, height_coords.y, args.htex_width, args.htex_height, args.htex_bpp)] * 0.001f;
+        strength = bs.heightPressure * height * cosine_fallof(radius / brush_radius, bs.falloff);
         args.buff_height_dptr[i] = clamp(args.buff_height_dptr[i] + strength, -1.0f, 1.0f);
     }
 }

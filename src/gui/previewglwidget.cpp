@@ -258,13 +258,50 @@ void PreviewGLWidget::setBrushType(BrushType type) {
 
 void PreviewGLWidget::setTexture(QString type, QString file) {
 	cpu->setTexture(type, file);
-	QImage tmp = cpu -> getTexture(type).convertToFormat(QImage::Format_RGB888);
-	gpu->setTexture(type.toStdString(), tmp.bits(),
-	        tmp.width(),tmp.height(), tmp.bytesPerLine()/tmp.width());
+	QImage tmp = cpu->getTexture(type).convertToFormat(QImage::Format_RGB888);
+	gpu->setTexture(type.toStdString(), tmp.bits(), tmp.width(),tmp.height(), tmp.bytesPerLine()/tmp.width());
 }
 
 void PreviewGLWidget::enableCUDA(bool enable) {
 	cuda_enabled = enable;
-	if (!enable)
-		cpu->updateBuffer(pbo_dptr);
+
+	if (width > 0 && height > 0) {
+        if (gpu->getWidth() != width || gpu->getHeight() != height)
+            gpu->setDimensions(width, height, pbo_dptr);
+
+        if (cpu->getWidth() != width || cpu->getHeight() != height)
+            cpu->setDimensions(width, height, pbo_dptr);
+
+        int buff_size = width * height;
+
+        const KernelArgs& ka = gpu->getKernelArgs();
+
+        if (enable) {
+            // send cpu buffers to device
+            checkCudaErrors(cudaMemcpy(ka.buff_height_dptr, cpu->getHeightBuffer(), buff_size * sizeof(float), cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(ka.buff_color_dptr, cpu->getColorBuffer(), buff_size * sizeof(float3), cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(ka.pbo, cpu->getBuffer(), buff_size * sizeof(uchar4), cudaMemcpyHostToDevice));
+        } else {
+            // fetch device buffers to cpu
+            checkCudaErrors(cudaMemcpy(cpu->getHeightBuffer(), ka.buff_height_dptr, buff_size * sizeof(float), cudaMemcpyDeviceToHost));
+            checkCudaErrors(cudaMemcpy(cpu->getColorBuffer(), ka.buff_color_dptr, buff_size * sizeof(float3), cudaMemcpyDeviceToHost));
+            checkCudaErrors(cudaMemcpy(cpu->getBuffer(), ka.pbo, buff_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
+        }
+
+        update();
+	}
+}
+
+void PreviewGLWidget::clearImage() {
+    if (gpu->getWidth() != width || gpu->getHeight() != height)
+        gpu->setDimensions(width, height, pbo_dptr);
+
+    if (cpu->getWidth() != width || cpu->getHeight() != height)
+        cpu->setDimensions(width, height, pbo_dptr);
+
+    cpu->clear();
+    gpu->clear();
+    cpu->updateWholeDisplay();
+    cpu->sendBufferToDevice(pbo_dptr);
+    update();
 }

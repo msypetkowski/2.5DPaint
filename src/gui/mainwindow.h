@@ -24,6 +24,9 @@ public slots:
 	void updateBrushType();
 	void setHeightTexture();
 	void setColorTexture();
+	void setBrushColor();
+	void updateColorBtnBackground();
+	void clearImage();
 	void enableCuda();
 
 private:

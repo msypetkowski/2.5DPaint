@@ -32,6 +32,7 @@ public:
 	void setBrushType(BrushType type);
 	void setTexture(QString type, QString file);
 	void enableCUDA(bool enable);
+	void clearImage();
 
 protected:
     void initializeGL() override;
@@ -65,7 +66,6 @@ private:
 	void imageTextureInit(int, int);
 
 	BrushSettings brushSettings;
-
 
 	bool cuda_enabled;
 	std::unique_ptr<GPUPainter> gpu = std::make_unique<GPUPainter>();

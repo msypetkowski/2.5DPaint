@@ -3,6 +3,7 @@
 #include <memory>
 #include <functional>
 
+#include "vector_functions.h"
 #include "../brush_settings.h"
 #include "../brush_type.h"
 
@@ -15,24 +16,20 @@ public:
 	int getHeight() { return h; }
 
 	void paint(int x, int y, uchar4 *pbo);
+	void clear();
 
 	virtual void setDimensions(int w, int h, uchar4 *pbo) = 0;
 	virtual void setBrushType(BrushType type) = 0;
-    int getBufferIndex(int x, int y);
-
-	void brushBasicPixel(int x, int y, int mx, int my);
-	void updateDisplayPixel(int x, int y);
-	float3 getNormal(int x, int y);
-	float sampleHeight(int x, int y);
-
-	bool in_bounds(int x, int y);
 
 	static std::unique_ptr<Painter> make_painter(bool is_gpu);
 private:
 	virtual void doPainting(int x, int y, uchar4 *pbo) = 0;
+	virtual void clearImage(float3 color, float height) = 0;
 
 protected:
 	BrushSettings brushSettings;
+
+	float3 backgroundColor = make_float3(125.0f, 125.0f, 125.0f);
 
 	int w, h;
 

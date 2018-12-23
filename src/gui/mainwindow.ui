@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>773</width>
-    <height>528</height>
+    <height>572</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -55,11 +55,8 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionSettings"/>
     <addaction name="actionSave_As"/>
     <addaction name="actionClear"/>
-    <addaction name="actionExit"/>
-    <addaction name="actionExit_2"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -129,7 +126,7 @@
            <cursorShape>PointingHandCursor</cursorShape>
           </property>
           <property name="text">
-           <string>Mean (@todo)</string>
+           <string>@todo</string>
           </property>
          </widget>
         </item>
@@ -187,6 +184,28 @@
             </property>
             <property name="value">
              <double>0.500000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="colorBtn">
+            <property name="maximumSize">
+             <size>
+              <width>24</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Click to pick a color</string>
+            </property>
+            <property name="text">
+             <string/>
             </property>
            </widget>
           </item>
@@ -299,7 +318,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="label_6">
+         <widget class="QLabel" name="texturesLabel">
           <property name="text">
            <string>Textures</string>
           </property>
@@ -345,6 +364,13 @@
          </layout>
         </item>
        </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="clearBtn">
+       <property name="text">
+        <string>Clear Image</string>
+       </property>
       </widget>
      </item>
     </layout>

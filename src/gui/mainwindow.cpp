@@ -3,6 +3,7 @@
 #include "../brush_type.h"
 
 #include <QFileDialog>
+#include <QtWidgets/QColorDialog>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -24,6 +25,10 @@ MainWindow::MainWindow(QWidget *parent) :
 	assert(connect(ui->colorG, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
 	assert(connect(ui->colorB, SIGNAL(valueChanged(qreal)), this, SLOT(updateSettings())));
 
+    assert(connect(ui->colorR, SIGNAL(valueChanged(qreal)), this, SLOT(updateColorBtnBackground())));
+    assert(connect(ui->colorG, SIGNAL(valueChanged(qreal)), this, SLOT(updateColorBtnBackground())));
+    assert(connect(ui->colorB, SIGNAL(valueChanged(qreal)), this, SLOT(updateColorBtnBackground())));
+
 	assert(connect(ui->defaultBrush, SIGNAL(clicked(bool)), this, SLOT(updateBrushType())));
 	assert(connect(ui->texturedBrush, SIGNAL(clicked(bool)), this, SLOT(updateBrushType())));
 	assert(connect(ui->radioButton_3, SIGNAL(clicked(bool)), this, SLOT(updateBrushType())));
@@ -31,9 +36,14 @@ MainWindow::MainWindow(QWidget *parent) :
 	assert(connect(ui->colorChooseButton, SIGNAL(clicked(bool)), this, SLOT(setColorTexture())));
 	assert(connect(ui->heightChooseButton, SIGNAL(clicked(bool)), this, SLOT(setHeightTexture())));
 
+	assert(connect(ui->colorBtn, SIGNAL(clicked(bool)), this, SLOT(setBrushColor())));
+	assert(connect(ui->actionClear, SIGNAL(triggered()), this, SLOT(clearImage())));
+	assert(connect(ui->clearBtn, SIGNAL(clicked(bool)), this, SLOT(clearImage())));
+
 	enableCuda();
 	updateSettings();
     updateBrushType();
+    updateColorBtnBackground();
 }
 
 MainWindow::~MainWindow()
@@ -62,8 +72,12 @@ void MainWindow::updateBrushType()
 	    + (ui->radioButton_3->isChecked() ? static_cast<int>(BrushType::Third) : 0);
 	ui->openGLWidget->setBrushType(static_cast<BrushType>(brush_id));
 
-    ui->colorChooseButton->setDisabled(brush_id != static_cast<const int>(BrushType::Textured));
-    ui->heightChooseButton->setDisabled(brush_id != static_cast<const int>(BrushType::Textured));
+	bool isTexturedBrush = brush_id == static_cast<const int>(BrushType::Textured);
+    ui->colorChooseButton->setDisabled(!isTexturedBrush);
+    ui->heightChooseButton->setDisabled(!isTexturedBrush);
+    ui->colorFilename->setDisabled(!isTexturedBrush);
+    ui->heightFilename->setDisabled(!isTexturedBrush);
+    ui->texturesLabel->setDisabled(!isTexturedBrush);
 }
 
 void MainWindow::enableCuda() {
@@ -90,4 +104,26 @@ void MainWindow::browseFilesFor(QLabel *what)
         what->setText(filename);
         ui->openGLWidget->setTexture(what->objectName(), file);
     }
+}
+
+void MainWindow::setBrushColor()
+{
+	QColor currentColor = QColor(ui->colorR->value() * 255, ui->colorG->value() * 255, ui->colorB->value() * 255);
+    QColor color = QColorDialog::getColor(currentColor, this, "Pick brush color");
+
+    ui->colorR->setValue(color.redF());
+    ui->colorG->setValue(color.greenF());
+    ui->colorB->setValue(color.blueF());
+}
+
+void MainWindow::updateColorBtnBackground()
+{
+	ui->colorBtn->setStyleSheet(QString("background-color: rgb(%1, %2, %3);").arg(QString::number(255 * ui->colorR->value()),
+                                                                                  QString::number(255 * ui->colorG->value()),
+                                                                                  QString::number(255 * ui->colorB->value())));
+}
+
+void MainWindow::clearImage()
+{
+    ui->openGLWidget->clearImage();
 }
