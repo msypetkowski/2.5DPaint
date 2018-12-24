@@ -31,7 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	assert(connect(ui->defaultBrush, SIGNAL(clicked(bool)), this, SLOT(updateBrushType())));
 	assert(connect(ui->texturedBrush, SIGNAL(clicked(bool)), this, SLOT(updateBrushType())));
-	assert(connect(ui->radioButton_3, SIGNAL(clicked(bool)), this, SLOT(updateBrushType())));
+	assert(connect(ui->smoothBrush, SIGNAL(clicked(bool)), this, SLOT(updateBrushType())));
 
 	assert(connect(ui->colorChooseButton, SIGNAL(clicked(bool)), this, SLOT(setColorTexture())));
 	assert(connect(ui->heightChooseButton, SIGNAL(clicked(bool)), this, SLOT(setHeightTexture())));
@@ -75,10 +75,21 @@ void MainWindow::updateBrushType()
 {
 	const auto brush_id = (ui->defaultBrush->isChecked() ? static_cast<int>(BrushType::Default) : 0)
 		+ (ui->texturedBrush->isChecked() ? static_cast<int>(BrushType::Textured) : 0)
-	    + (ui->radioButton_3->isChecked() ? static_cast<int>(BrushType::Third) : 0);
+	    + (ui->smoothBrush->isChecked() ? static_cast<int>(BrushType::Smooth) : 0);
 	ui->openGLWidget->setBrushType(static_cast<BrushType>(brush_id));
 
 	bool isTexturedBrush = brush_id == static_cast<const int>(BrushType::Textured);
+	bool isBasicBrush = brush_id == static_cast<const int>(BrushType::Default);
+	bool isSmoothBrush = brush_id == static_cast<const int>(BrushType::Smooth);
+
+	ui->colorBtn->setDisabled(!isBasicBrush);
+	ui->colorR->setDisabled(!isBasicBrush);
+	ui->colorG->setDisabled(!isBasicBrush);
+	ui->colorB->setDisabled(!isBasicBrush);
+	ui->brushPressureSpinBox->setDisabled(isSmoothBrush);
+	ui->heightPressureSpinBox->setDisabled(isSmoothBrush);
+
+	// only for textures
     ui->colorChooseButton->setDisabled(!isTexturedBrush);
     ui->heightChooseButton->setDisabled(!isTexturedBrush);
     ui->colorFilename->setDisabled(!isTexturedBrush);

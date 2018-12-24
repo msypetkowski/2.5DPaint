@@ -60,6 +60,7 @@ void CPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     buffer.resize(buf_size);
     bufferColor.resize(buf_size);
     bufferHeight.resize(buf_size);
+    swapbufferHeight.resize(buf_size);
 
     checkCudaErrors(cudaMemcpy(buffer.data(), pbo, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
 
@@ -69,6 +70,7 @@ void CPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     buffer_pbo = buffer.data();
     buffer_color = bufferColor.data();
     buffer_height = bufferHeight.data();
+    swap_buffer_height = swapbufferHeight.data();
 
     updateWholeDisplay();
 }
@@ -77,6 +79,7 @@ void CPUPainter::clearImage(float3 color, float height) {
 
     bufferColor.fill(color);
     bufferHeight.fill(height);
+    swapbufferHeight.fill(height);
 
     std::clog << "[CPU] Clear image\n";
 }
@@ -91,8 +94,8 @@ void CPUPainter::setBrushType(BrushType type) {
         case BrushType::Textured:
             paint_function = std::bind(&CPUPainter::brushTextured, this, _1, _2);
             break;
-        case BrushType::Third:
-            std::clog << "[CPU] Warning: chose unused brush\n";
+        case BrushType::Smooth:
+            paint_function = std::bind(&CPUPainter::brushSmooth, this, _1, _2);
             break;
         default:
             throw std::runtime_error("Invalid brush type: "
@@ -148,6 +151,13 @@ const QImage &CPUPainter::getTexture(const QString &type) const {
     }
 }
 
+void CPUPainter::swapHeightBuffer() {
+    float* tmp = buffer_height;
+    buffer_height = swap_buffer_height;
+    swap_buffer_height = tmp;
+}
+
+
 /**********************************************************************************************************************/
 /*
  * Brush functions
@@ -172,7 +182,11 @@ void CPUPainter::brushBasic(int mx, int my) {
 
             // paint height
             strength = brushSettings.heightPressure * cosine_fallof(radius / brush_radius, brushSettings.falloff);
-            buffer_height[i] = clamp(buffer_height[i] + strength, -1.0f, 1.0f);
+
+            float result = clamp(buffer_height[i] + strength, -1.0f, 1.0f);
+
+            buffer_height[i] = result;
+            swap_buffer_height[i] = result;
         }
     }
     updatePainted(mx, my);
@@ -225,9 +239,49 @@ void CPUPainter::brushTextured(int mx, int my) {
 
             strength = brushSettings.heightPressure * height * cosine_fallof(radius / maxRadius, brushSettings.falloff);
 
-            bufferHeight[i] = clamp(bufferHeight[i] + strength, -1.0f, 1.0f);
+            float result = clamp(buffer_height[i] + strength, -1.0f, 1.0f);
+
+            buffer_height[i] = result;
+            swap_buffer_height[i] = result;
         }
     }
+    updatePainted(mx, my);
+}
+
+void CPUPainter::brushSmooth(int mx, int my) {
+    float brush_radius = brushSettings.size / 2.0f;
+    for (int x = mx - brush_radius + 1; x < mx + brush_radius; ++x) {
+        for (int y = my - brush_radius + 1; y < my + brush_radius; ++y) {
+            if (!inBounds(x, y))
+                continue;
+            float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
+            if (radius > brush_radius) {
+                continue;
+            }
+            int i = getBufferIndex(x, y);
+
+            float strength = cosine_fallof(radius / brush_radius, brushSettings.falloff);
+
+            // apply convolution filter
+            auto mid = sampleHeight(x, y);
+
+            auto left = sampleHeight(x - 1, y);
+            auto right = sampleHeight(x + 1, y);
+
+            auto top = sampleHeight(x, y + 1);
+            auto bottom = sampleHeight(x, y - 1);
+
+            auto topleft = sampleHeight(x - 1, y - 1);
+            auto topright = sampleHeight(x + 1, y - 1);
+            auto bottomleft = sampleHeight(x - 1, y + 1);
+            auto bottomright = sampleHeight(x + 1, y + 1);
+
+            float result = (mid + left + right + top + bottom + topleft + topright + bottomleft + bottomright) / 9.0f;
+
+            swap_buffer_height[i] = mid + strength * (result - mid);
+        }
+    }
+    swapHeightBuffer();
     updatePainted(mx, my);
 }
 

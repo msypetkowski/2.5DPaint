@@ -28,11 +28,15 @@ void GPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     checkCudaErrors(cudaMalloc((void **) &buffer_height, buf_size * sizeof(float)));
     //checkCudaErrors(cudaMemset(buffer_height, 0, buf_size * sizeof(float)));
 
+    checkCudaErrors(cudaMalloc((void **) &swap_buffer_height, buf_size * sizeof(float)));
+    //checkCudaErrors(cudaMemset(buffer_height, 0, buf_size * sizeof(float)));
+
     checkCudaErrors(cudaMalloc((void **) &buffer_color, buf_size * sizeof(float3)));
     //checkCudaErrors(cudaMemset(buffer_color, 0, buf_size * sizeof(float3)));
 
     args.buff_color_dptr = buffer_color;
     args.buff_height_dptr = buffer_height;
+    args.swap_buff_height_dptr = swap_buffer_height;
 
     args.light_direction = lightDirection;
 
@@ -54,8 +58,8 @@ void GPUPainter::setBrushType(BrushType type) {
         case BrushType::Textured:
             paint_function = std::bind(&GPUPainter::brushTextured, this, _1, _2);
             break;
-        case BrushType::Third:
-            std::clog << "[GPU] Warning: chose unused brush\n";
+        case BrushType::Smooth:
+            paint_function = std::bind(&GPUPainter::brushSmooth, this, _1, _2);
             break;
         default:
             throw std::runtime_error("Invalid brush type: "
@@ -103,6 +107,9 @@ void GPUPainter::clearImage(float3 color, float height) {
 
     if (args.buff_height_dptr != nullptr) {
         checkCudaErrors(cudaMemcpy(args.buff_height_dptr, fillh.data(), w * h * sizeof(float), cudaMemcpyHostToDevice));
+    }
+    if (args.buff_height_dptr != nullptr) {
+        checkCudaErrors(cudaMemcpy(args.swap_buff_height_dptr, fillh.data(), w * h * sizeof(float), cudaMemcpyHostToDevice));
     }
     if (args.buff_color_dptr != nullptr) {
         checkCudaErrors(cudaMemcpy(args.buff_color_dptr, fillcol.data(), w * h * sizeof(float3), cudaMemcpyHostToDevice));
@@ -155,6 +162,14 @@ float3 __device__ getNormal(int x, int y, float bending, const KernelArgs &args)
     return normalize(ret);
 }
 
+void GPUPainter::swapHeightBuffer() {
+    float* tmp = buffer_height;
+    buffer_height = swap_buffer_height;
+    swap_buffer_height = tmp;
+
+    args.buff_height_dptr = buffer_height;
+    args.swap_buff_height_dptr = swap_buffer_height;
+}
 
 /**********************************************************************************************************************/
 /*
@@ -187,7 +202,10 @@ void brushBasic_GPU_KERNEL(int mx, int my, const BrushSettings bs, const KernelA
 
             // paint height
             strength = bs.heightPressure * cosine_fallof(radius / brush_radius, bs.falloff);
-            args.buff_height_dptr[i] = clamp(args.buff_height_dptr[i] + strength, -1.0f, 1.0f);
+
+            float result = clamp(args.buff_height_dptr[i] + strength, -1.0f, 1.0f);
+            args.buff_height_dptr[i] = result;
+            args.swap_buff_height_dptr[i] = result;
         }
     }
 }
@@ -245,7 +263,51 @@ void brushTextured_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
                                            args.htex_bpp)] * 0.001f;
 
         strength = bs.heightPressure * height * cosine_fallof(radius / brush_radius, bs.falloff);
-        args.buff_height_dptr[i] = clamp(args.buff_height_dptr[i] + strength, -1.0f, 1.0f);
+
+        float result = clamp(args.buff_height_dptr[i] + strength, -1.0f, 1.0f);
+        args.buff_height_dptr[i] = result;
+        args.swap_buff_height_dptr[i] = result;
+    }
+}
+
+
+/*
+ * Smooth brush kernel
+ */
+__global__
+void brushSmooth_GPU_KERNEL(int mx, int my, const BrushSettings bs, const KernelArgs args) {
+
+    float brush_radius = bs.size / 2.0f;
+
+    int x = (blockIdx.x * blockDim.x) + threadIdx.x + mx - int(brush_radius);
+    int y = (blockIdx.y * blockDim.y) + threadIdx.y + my - int(brush_radius);
+
+    float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
+
+    if (radius < brush_radius) {
+        if (inBounds(x, y, args.w, args.h)) {
+            int i = getBufferIndex(x, y, args.w);
+
+            float strength = cosine_fallof(radius / brush_radius, bs.falloff);
+
+            // apply convolution filter
+            auto mid = sampleHeight(x, y, args);
+
+            auto left = sampleHeight(x - 1, y, args);
+            auto right = sampleHeight(x + 1, y, args);
+
+            auto top = sampleHeight(x, y + 1, args);
+            auto bottom = sampleHeight(x, y - 1, args);
+
+            auto topleft = sampleHeight(x - 1, y - 1, args);
+            auto topright = sampleHeight(x + 1, y - 1, args);
+            auto bottomleft = sampleHeight(x - 1, y + 1, args);
+            auto bottomright = sampleHeight(x + 1, y + 1, args);
+
+            float result = (mid + left + right + top + bottom + topleft + topright + bottomleft + bottomright) / 9.0f;
+
+            args.swap_buff_height_dptr[i] = mid + strength * (result - mid);
+        }
     }
 }
 
@@ -338,6 +400,24 @@ void GPUPainter::brushTextured(int mx, int my) {
     updateDisplay_GPU_KERNEL << < args.blocksPerGrid, args.blockSize >> >(mx, my, brushSettings, args);
     checkCudaErrors(cudaDeviceSynchronize());
 }
+
+
+void GPUPainter::brushSmooth(int mx, int my) {
+    int size = int(brushSettings.size);
+
+    // set cuda kernels launch params
+    const int blockSideLength = 32;
+
+    args.blockSize = dim3(blockSideLength, blockSideLength);
+    args.blocksPerGrid = dim3((size + args.blockSize.x - 1) / args.blockSize.x, (size + args.blockSize.y - 1) / args.blockSize.y);
+
+    brushSmooth_GPU_KERNEL << < args.blocksPerGrid, args.blockSize >> >(mx, my, brushSettings, args);
+    updateDisplay_GPU_KERNEL << < args.blocksPerGrid, args.blockSize >> >(mx, my, brushSettings, args);
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    swapHeightBuffer();
+}
+
 
 void GPUPainter::updateWholeDisplay() {
 

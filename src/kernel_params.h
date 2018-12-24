@@ -15,6 +15,7 @@ struct KernelArgs {
 
     float3* buff_color_dptr = nullptr; // device color buffer global memory pointer
     float* buff_height_dptr = nullptr; // device height buffer global memory pointer
+    float* swap_buff_height_dptr = nullptr; // device swap height buffer global memory pointer
 
 
     int ctex_width, ctex_height, htex_height, htex_width; // color and height textures sizes

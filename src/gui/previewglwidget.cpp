@@ -279,11 +279,13 @@ void PreviewGLWidget::enableCUDA(bool enable) {
         if (enable) {
             // send cpu buffers to device
             checkCudaErrors(cudaMemcpy(ka.buff_height_dptr, cpu->getHeightBuffer(), buff_size * sizeof(float), cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(ka.swap_buff_height_dptr, cpu->getHeightBuffer(), buff_size * sizeof(float), cudaMemcpyHostToDevice));
             checkCudaErrors(cudaMemcpy(ka.buff_color_dptr, cpu->getColorBuffer(), buff_size * sizeof(float3), cudaMemcpyHostToDevice));
             checkCudaErrors(cudaMemcpy(ka.pbo, cpu->getBuffer(), buff_size * sizeof(uchar4), cudaMemcpyHostToDevice));
         } else {
             // fetch device buffers to cpu
             checkCudaErrors(cudaMemcpy(cpu->getHeightBuffer(), ka.buff_height_dptr, buff_size * sizeof(float), cudaMemcpyDeviceToHost));
+            checkCudaErrors(cudaMemcpy(cpu->getSwapHeightBuffer(), ka.swap_buff_height_dptr, buff_size * sizeof(float), cudaMemcpyDeviceToHost));
             checkCudaErrors(cudaMemcpy(cpu->getColorBuffer(), ka.buff_color_dptr, buff_size * sizeof(float3), cudaMemcpyDeviceToHost));
             checkCudaErrors(cudaMemcpy(cpu->getBuffer(), ka.pbo, buff_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
         }
