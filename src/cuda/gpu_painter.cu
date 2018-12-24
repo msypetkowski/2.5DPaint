@@ -167,11 +167,13 @@ float3 __device__ getNormal(int x, int y, float bending, const KernelArgs &args)
 __global__
 void brushBasic_GPU_KERNEL(int mx, int my, const BrushSettings bs, const KernelArgs args) {
 
-    int x = (blockIdx.x * blockDim.x) + threadIdx.x;
-    int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+    float brush_radius = bs.size / 2.0f;
+
+    int x = (blockIdx.x * blockDim.x) + threadIdx.x + mx - int(brush_radius);
+    int y = (blockIdx.y * blockDim.y) + threadIdx.y + my - int(brush_radius);
 
     float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
-    float brush_radius = bs.size / 2.0f;
+
     if (radius < brush_radius) {
         if (inBounds(x, y, args.w, args.h)) {
             // use brush
@@ -196,11 +198,12 @@ void brushBasic_GPU_KERNEL(int mx, int my, const BrushSettings bs, const KernelA
 __global__
 void brushTextured_GPU_KERNEL(int mx, int my, const BrushSettings bs, const KernelArgs args) {
 
-    int x = (blockIdx.x * blockDim.x) + threadIdx.x;
-    int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+    float brush_radius = bs.size / 2.0f;
+
+    int x = (blockIdx.x * blockDim.x) + threadIdx.x + mx - int(brush_radius);
+    int y = (blockIdx.y * blockDim.y) + threadIdx.y + my - int(brush_radius);
 
     float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
-    float brush_radius = bs.size / 2.0f;
 
     if (radius < brush_radius && inBounds(x, y, args.w, args.h)) {
         int i = getBufferIndex(x, y, args.w);
@@ -255,15 +258,14 @@ void brushTextured_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
 __global__
 void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const KernelArgs args) {
 
-    int x = (blockIdx.x * blockDim.x) + threadIdx.x;
-    int y = (blockIdx.y * blockDim.y) + threadIdx.y;
+    float brush_radius = bs.size / 2.0f;
 
     bool update_whole_display = mx == -1 && my == -1;
 
-    float radius = sqrtf((x - mx) * (x - mx) + (y - my) * (y - my));
-    float brush_radius = bs.size / 2.0f;
+    int x = (blockIdx.x * blockDim.x) + threadIdx.x + (update_whole_display ? 0 : (mx - int(brush_radius)));
+    int y = (blockIdx.y * blockDim.y) + threadIdx.y + (update_whole_display ? 0 : (my - int(brush_radius)));
 
-    if ((radius < brush_radius || update_whole_display) && inBounds(x, y, args.w, args.h)) {
+    if (inBounds(x, y, args.w, args.h)) {
         // shading pixels
         int i = getBufferIndex(x, y, args.w);
 
@@ -303,6 +305,14 @@ void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
 
 void GPUPainter::brushBasic(int mx, int my) {
 
+    int size = int(brushSettings.size);
+
+    // set cuda kernels launch params
+    const int blockSideLength = 32;
+
+    args.blockSize = dim3(blockSideLength, blockSideLength);
+    args.blocksPerGrid = dim3((size + args.blockSize.x - 1) / args.blockSize.x, (size + args.blockSize.y - 1) / args.blockSize.y);
+
     // @ TODO compute real cuda time
     brushBasic_GPU_KERNEL <<< args.blocksPerGrid, args.blockSize >>>(mx, my, brushSettings, args);
     updateDisplay_GPU_KERNEL <<< args.blocksPerGrid, args.blockSize >>>(mx, my, brushSettings, args);
@@ -316,12 +326,27 @@ void GPUPainter::brushTextured(int mx, int my) {
         return;
     }
 
+    int size = int(brushSettings.size);
+
+    // set cuda kernels launch params
+    const int blockSideLength = 32;
+
+    args.blockSize = dim3(blockSideLength, blockSideLength);
+    args.blocksPerGrid = dim3((size + args.blockSize.x - 1) / args.blockSize.x, (size + args.blockSize.y - 1) / args.blockSize.y);
+
     brushTextured_GPU_KERNEL << < args.blocksPerGrid, args.blockSize >> >(mx, my, brushSettings, args);
     updateDisplay_GPU_KERNEL << < args.blocksPerGrid, args.blockSize >> >(mx, my, brushSettings, args);
     checkCudaErrors(cudaDeviceSynchronize());
 }
 
 void GPUPainter::updateWholeDisplay() {
+
+    // set cuda kernels launch params
+    const int blockSideLength = 32;
+
+    args.blockSize = dim3(blockSideLength, blockSideLength);
+    args.blocksPerGrid = dim3((w + args.blockSize.x - 1) / args.blockSize.x, (h + args.blockSize.y - 1) / args.blockSize.y);
+
     updateDisplay_GPU_KERNEL << < args.blocksPerGrid, args.blockSize >> >(-1, -1, brushSettings, args);
     checkCudaErrors(cudaDeviceSynchronize());
 }
