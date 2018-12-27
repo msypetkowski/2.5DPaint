@@ -161,8 +161,6 @@ float __device__ sampleHeight(int x, int y, int w, int h, const float *buffer) {
 }
 
 float3 __device__ getNormalFromNeighbours(float mid, float left, float right, float top, float bottom, float bending){
-    // get height values near pixel given by x, y coords
-    //
     //        |   top  |
     //  ______|________|_______
     //   left |   mid  | right
@@ -189,6 +187,7 @@ float3 __device__ getNormalFromNeighbours(float mid, float left, float right, fl
 }
 
 float3 __device__ getNormal(int x, int y, float bending, int w, int h, const float *buffer) {
+    // get height values near pixel given by x, y coords
     auto mid = sampleHeight(x, y, w, h, buffer);
     auto left = sampleHeight(x - 1, y, w, h, buffer);
     auto right = sampleHeight(x + 1, y, w, h, buffer);
@@ -386,12 +385,11 @@ void brushSmooth_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kernel
  */
 __device__ __forceinline__
 void updateDisplayImpl_noShm(int mx, int my, const BrushSettings bs, const KernelArgs args) {
-    // printf("dupa");
-
     float brush_radius = bs.size / 2.0f;
 
     bool update_whole_display = mx == -1 && my == -1;
 
+    // pixel coordinates on the target image
     int x = (blockIdx.x * blockDim.x) + threadIdx.x + (update_whole_display ? 0 : (mx - int(brush_radius)));
     int y = (blockIdx.y * blockDim.y) + threadIdx.y + (update_whole_display ? 0 : (my - int(brush_radius)));
 
@@ -436,7 +434,6 @@ void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
     // updateDisplayImpl_noShm(mx, my, bs, args);
 
     float brush_radius = bs.size / 2.0f;
-
     bool update_whole_display = mx == -1 && my == -1;
 
     // coordinates of the beginning of current block
@@ -447,6 +444,7 @@ void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
     int tx = threadIdx.x;
     int ty = threadIdx.y;
 
+    // pixel coordinates on the target image
     int x = bx + tx;
     int y = by + ty;
 
