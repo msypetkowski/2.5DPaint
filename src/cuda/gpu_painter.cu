@@ -12,6 +12,9 @@
 #include "utils.h"
 
 
+const int blockSideLength = 32;
+
+
 void GPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     args.w = w = w1;
     args.h = h = h1;
@@ -39,9 +42,6 @@ void GPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     args.swap_buff_height_dptr = swap_buffer_height;
 
     args.light_direction = lightDirection;
-
-    // set cuda kernels launch params
-    const int blockSideLength = 32;
 
     args.blockSize = dim3(blockSideLength, blockSideLength);
     args.blocksPerGrid = dim3((w + args.blockSize.x - 1) / args.blockSize.x, (h + args.blockSize.y - 1) / args.blockSize.y);
@@ -136,14 +136,14 @@ float __device__ sampleHeight(int x, int y, const KernelArgs &args) {
     return args.buff_height_dptr[getBufferIndex(x, y, args.w)];
 }
 
-float3 __device__ getNormal(int x, int y, float bending, const KernelArgs &args) {
-    float dx = 0.0f, dy = 0.0f;
+float __device__ sampleHeight(int x, int y, int w, int h, const float *buffer) {
+    x = clamp(x, 0, w - 1);
+    y = clamp(y, 0, h - 1);
+    return buffer[y * w + x];
+}
 
-    auto mid = sampleHeight(x, y, args);
-    auto left = sampleHeight(x - 1, y, args);
-    auto right = sampleHeight(x + 1, y, args);
-    auto top = sampleHeight(x, y + 1, args);
-    auto bottom = sampleHeight(x, y - 1, args);
+float3 __device__ getNormalFromNeighbours(float mid, float left, float right, float top, float bottom, float bending){
+    float dx = 0.0f, dy = 0.0f;
 
     dx += normal_from_delta(mid - right) / 2;
     dx -= normal_from_delta(mid - left) / 2;
@@ -151,7 +151,6 @@ float3 __device__ getNormal(int x, int y, float bending, const KernelArgs &args)
     dy += normal_from_delta(mid - top) / 2;
     dy -= normal_from_delta(mid - bottom) / 2;
 
-    // TODO: make parameter or constant
     dx *= bending;
     dy *= bending;
 
@@ -160,6 +159,24 @@ float3 __device__ getNormal(int x, int y, float bending, const KernelArgs &args)
 
     auto ret = make_float3(dx, dy, sqrtf(fabsf(1.0f - dx * dx - dy * dy)));
     return normalize(ret);
+}
+
+float3 __device__ getNormal(int x, int y, float bending, int w, int h, const float *buffer) {
+    auto mid = sampleHeight(x, y, w, h, buffer);
+    auto left = sampleHeight(x - 1, y, w, h, buffer);
+    auto right = sampleHeight(x + 1, y, w, h, buffer);
+    auto top = sampleHeight(x, y + 1, w, h, buffer);
+    auto bottom = sampleHeight(x, y - 1, w, h, buffer);
+    return getNormalFromNeighbours(mid, left, right, top, bottom, bending);
+}
+
+float3 __device__ getNormal(int x, int y, float bending, const KernelArgs &args) {
+    auto mid = sampleHeight(x, y, args);
+    auto left = sampleHeight(x - 1, y, args);
+    auto right = sampleHeight(x + 1, y, args);
+    auto top = sampleHeight(x, y + 1, args);
+    auto bottom = sampleHeight(x, y - 1, args);
+    return getNormalFromNeighbours(mid, left, right, top, bottom, bending);
 }
 
 void GPUPainter::swapHeightBuffer() {
@@ -317,8 +334,9 @@ void brushSmooth_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kernel
  * This kernel calculates normals based on height buffer and shades pixels properly
  * Result color is stored in pbo buffer which is rendered on the screen using OpenGL (QOpenGLWidget)
  */
-__global__
-void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const KernelArgs args) {
+__device__ __forceinline__
+void updateDisplayImpl_noShm(int mx, int my, const BrushSettings bs, const KernelArgs args) {
+    // printf("dupa");
 
     float brush_radius = bs.size / 2.0f;
 
@@ -358,6 +376,79 @@ void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
     }
 }
 
+
+/*
+ * Implementation of updateDisplay_GPU_KERNEL using shared memory for global memory reads optimization.
+ */
+__global__
+void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const KernelArgs args) {
+    // Uncomment this line, and comment the rest of this function for testing
+    // updateDisplayImpl_noShm(mx, my, bs, args);
+
+    float brush_radius = bs.size / 2.0f;
+
+    bool update_whole_display = mx == -1 && my == -1;
+
+    // coordinates of the beginning of current block
+    int bx = (blockIdx.x * blockDim.x) + (update_whole_display ? 0 : (mx - int(brush_radius)));
+    int by = (blockIdx.y * blockDim.y) + (update_whole_display ? 0 : (my - int(brush_radius)));
+
+    // coordinates inside current block
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+
+    int x = bx + tx;
+    int y = by + ty;
+
+    // alloc shared memory for heightmap (reduces global reads from 5 to 1 in getNormal)
+    const int cache_dim = blockSideLength + 2;
+    __shared__ float height_cached[cache_dim * cache_dim];
+    height_cached[(ty + 1) * cache_dim + (tx + 1)] = sampleHeight(x, y, args);
+
+    // fill borders (otherwise there would be artifacts - checker-like image)
+    if (threadIdx.x == 0) {
+        height_cached[(ty + 1) * cache_dim] = sampleHeight(bx - 1, y, args);
+        height_cached[(ty + 1) * cache_dim + cache_dim - 1] = sampleHeight(bx - 1 + cache_dim - 1, y, args);
+    }
+    if (threadIdx.y == 0) {
+        height_cached[tx + 1] = sampleHeight(x, by - 1, args);
+        height_cached[(cache_dim - 1) * cache_dim + tx + 1] = sampleHeight(x, by - 1 + cache_dim - 1, args);
+    }
+
+    __syncthreads();
+
+    if (inBounds(x, y, args.w, args.h)) {
+        // shading pixels
+        int i = getBufferIndex(x, y, args.w);
+
+        auto normal = getNormal(tx+1, ty+1, bs.normalBending, blockSideLength + 2, blockSideLength + 2, height_cached);
+        // auto normal = getNormal(x, y, bs.normalBending, args);
+
+        float3 color;
+
+        if (!bs.renderNormals) {
+
+            float3 lighting = normalize(args.light_direction);
+
+            float shadow = fabsf(dot(lighting, normal));
+            shadow = clamp(shadow, 0.0f, 1.0f);
+
+            float specular = 1.0f - length(normal - lighting);
+            specular = powf(specular, 8.0f);
+            specular = clamp(specular, 0.0f, 1.0f);
+
+            color = lerp(args.buff_color_dptr[i] * shadow, make_float3(255.0f), specular);
+        } else {
+            // view normals
+            color.x = normal.x * 255.0 / 2 + 255.0 / 2;
+            color.y = normal.y * 255.0 / 2 + 255.0 / 2;
+            color.z = normal.z * 255;
+        }
+        color = clamp(color, make_float3(0.0f), make_float3(255.0f));
+        args.pbo[i] = make_uchar4(color.x, color.y, color.z, 0);
+    }
+}
+
 /**********************************************************************************************************************/
 
 /*
@@ -368,9 +459,6 @@ void updateDisplay_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
 void GPUPainter::brushBasic(int mx, int my) {
 
     int size = int(brushSettings.size);
-
-    // set cuda kernels launch params
-    const int blockSideLength = 32;
 
     args.blockSize = dim3(blockSideLength, blockSideLength);
     args.blocksPerGrid = dim3((size + args.blockSize.x - 1) / args.blockSize.x, (size + args.blockSize.y - 1) / args.blockSize.y);
@@ -390,9 +478,6 @@ void GPUPainter::brushTextured(int mx, int my) {
 
     int size = int(brushSettings.size);
 
-    // set cuda kernels launch params
-    const int blockSideLength = 32;
-
     args.blockSize = dim3(blockSideLength, blockSideLength);
     args.blocksPerGrid = dim3((size + args.blockSize.x - 1) / args.blockSize.x, (size + args.blockSize.y - 1) / args.blockSize.y);
 
@@ -404,9 +489,6 @@ void GPUPainter::brushTextured(int mx, int my) {
 
 void GPUPainter::brushSmooth(int mx, int my) {
     int size = int(brushSettings.size);
-
-    // set cuda kernels launch params
-    const int blockSideLength = 32;
 
     args.blockSize = dim3(blockSideLength, blockSideLength);
     args.blocksPerGrid = dim3((size + args.blockSize.x - 1) / args.blockSize.x, (size + args.blockSize.y - 1) / args.blockSize.y);
@@ -420,9 +502,6 @@ void GPUPainter::brushSmooth(int mx, int my) {
 
 
 void GPUPainter::updateWholeDisplay() {
-
-    // set cuda kernels launch params
-    const int blockSideLength = 32;
 
     args.blockSize = dim3(blockSideLength, blockSideLength);
     args.blocksPerGrid = dim3((w + args.blockSize.x - 1) / args.blockSize.x, (h + args.blockSize.y - 1) / args.blockSize.y);
