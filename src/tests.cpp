@@ -26,8 +26,8 @@ float compareBuffers(int buf_size, uchar4 *buf1, uchar4 *buf2) {
 		maxError = max(maxError, abs(b1[i].z - b2[i].z));
 		maxError = max(maxError, abs(b1[i].w - b2[i].w));
 	}
-	cout << "Average error:" << (float)sum / buf_size << endl;
-	cout << "Max error:" << maxError << endl;
+    cout << "Average error: " << (float)sum / buf_size << endl;
+    cout << "Max error in pixel space (int from [0,255]): " << maxError << endl;
 
 	return maxError;
 }
@@ -79,8 +79,8 @@ float brushTest(BrushType brushType) {
 	// straight line
 	const auto line_samples = 200;
 	const auto dots_samples = 300;
-	std::vector<double> gpu_paint_times(line_samples + dots_samples);
-	std::vector<double> cpu_paint_times(line_samples + dots_samples);
+    std::vector<double> gpu_paint_times;
+    std::vector<double> cpu_paint_times;
 	for (int i=0 ; i < line_samples; ++i) {
 		int x = i*3;
 		int y = i*5;
