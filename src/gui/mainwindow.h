@@ -20,21 +20,21 @@ public:
     ~MainWindow();
 
 public slots:
-	void updateSettings();
-	void updateBrushType();
-	void setHeightTexture();
-	void setColorTexture();
-	void setBrushColor();
-	void updateColorBtnBackground();
-	void clearImage();
-	void enableCuda();
+    void updateSettings();
+    void updateBrushType();
+    void setHeightTexture();
+    void setColorTexture();
+    void setBrushColor();
+    void updateColorBtnBackground();
+    void clearImage();
+    void enableCuda();
 
 private:
-	void browseFilesFor(QLabel *what);
+    void browseFilesFor(QLabel *what);
 
     Ui::MainWindow *ui;
 
-	BrushSettings brushSettings;
+    BrushSettings brushSettings;
 };
 
 #endif // MAINWINDOW_H

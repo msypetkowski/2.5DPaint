@@ -105,8 +105,8 @@ void GPUPainter::doPainting(int x, int y, uchar4 *pbo) {
     paint_function(x, y);
     auto end_time = std::chrono::steady_clock::now();
 
-	last_painting_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count() / 1e6f;
-	std::clog << "[GPU] Painting time: " << last_painting_time << "ms\n";
+    last_painting_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count() / 1e6f;
+    std::clog << "[GPU] Painting time: " << last_painting_time << "ms\n";
 }
 
 // sets image to default state

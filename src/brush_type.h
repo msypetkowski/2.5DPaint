@@ -1,7 +1,7 @@
 #pragma once
 
 enum class BrushType {
-	Default,
-	Textured,
-	Smooth,
+    Default,
+    Textured,
+    Smooth,
 };
