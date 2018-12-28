@@ -15,6 +15,7 @@ public:
 	void setBrush(const BrushSettings& settings) { this->brushSettings = settings; }
 	int getWidth() { return w; }
 	int getHeight() { return h; }
+	double getLastPaintingTime() { return last_painting_time; }
 
 	void paint(int x, int y, uchar4 *pbo);
 	void clear();
@@ -34,6 +35,7 @@ protected:
 	float3 lightDirection = normalize(make_float3(-0.4f, -0.4f, 1.0f));
 
 	int w, h;
+	float last_painting_time = 0.f;
 
 	// display buffer
 	uchar4* buffer_pbo = nullptr;

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 using namespace std;
 
 #include "cuda_runtime.h"
@@ -46,7 +47,7 @@ float brushTest(BrushType brushType) {
 	bs.falloff = 0.5;
 	bs.heightPressure = 0.02;
 	bs.pressure = 0.5;
-	bs.size = 83;
+	bs.size = 200;
 	bs.normalBending = 100;
 
 	CPUPainter cpu;
@@ -76,22 +77,32 @@ float brushTest(BrushType brushType) {
 	}
 
 	// straight line
-	for (int i=0 ; i < 200 ; ++i) {
+	const auto line_samples = 200;
+	const auto dots_samples = 300;
+	std::vector<double> gpu_paint_times(line_samples + dots_samples);
+	std::vector<double> cpu_paint_times(line_samples + dots_samples);
+	for (int i=0 ; i < line_samples; ++i) {
 		int x = i*3;
 		int y = i*5;
 		cpu.paint(x, y, pbo1);
 		gpu.paint(x, y, pbo2);
+		cpu_paint_times.push_back(cpu.getLastPaintingTime());
+		gpu_paint_times.push_back(gpu.getLastPaintingTime());
 	}
 
 	// random dots
 	srand(123);
-	for (int i=0 ; i < 300 ; ++i) {
+	for (int i=0 ; i < dots_samples; ++i) {
 		int x = rand()%dim1;
 		int y = rand()%dim2;
 		cpu.paint(x, y, pbo1);
 		gpu.paint(x, y, pbo2);
+		cpu_paint_times.push_back(cpu.getLastPaintingTime());
+		gpu_paint_times.push_back(gpu.getLastPaintingTime());
 	}
 
+	cout << "Average time for CPU: " << std::accumulate(cpu_paint_times.begin(), cpu_paint_times.end(), 0.f) / cpu_paint_times.size() << "ms\n";
+	cout << "Average time for GPU: " << std::accumulate(gpu_paint_times.begin(), gpu_paint_times.end(), 0.f) / gpu_paint_times.size() << "ms\n";
 	return compareBuffers(buf_size, pbo1, pbo2);
 }
 

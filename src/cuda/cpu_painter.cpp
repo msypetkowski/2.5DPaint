@@ -108,7 +108,7 @@ void CPUPainter::doPainting(int x, int y, uchar4 *pbo) {
 
     auto start_time = std::chrono::steady_clock::now();
     paint_function(x, y);
-    const auto painting_duration = (float)std::chrono::duration_cast<std::chrono::nanoseconds>(
+    last_painting_time = (float)std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::steady_clock::now() - start_time).count() / (float)1e6;
 
     start_time = std::chrono::steady_clock::now();
@@ -116,9 +116,9 @@ void CPUPainter::doPainting(int x, int y, uchar4 *pbo) {
     const auto memcpy_h2d = (float)std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::steady_clock::now() - start_time).count() / (float)1e6;
 
-    std::clog << "[CPU] Painting time: " << painting_duration << " ms\n";
+    std::clog << "[CPU] Painting time: " << last_painting_time << " ms\n";
     std::clog << "[CPU] Copying pbo (host -> device): " << memcpy_h2d << " ms\n";
-    std::clog << "[CPU] Sum: " << (memcpy_h2d + painting_duration) << " ms\n";
+    std::clog << "[CPU] Sum: " << (memcpy_h2d + last_painting_time) << " ms\n";
 }
 
 void CPUPainter::pullBufferFromDevice(uchar4 *pbo) {

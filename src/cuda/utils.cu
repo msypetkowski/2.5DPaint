@@ -1,6 +1,9 @@
 #include "utils.h"
 #include "helper_math.h"
 
+#ifndef M_PI  // workaround since apparently different versions of math.h may or may not define the constant
+#   define M_PI 3.14f
+#endif
 
 float3 interpolate_color(float3 oldColor, float strength, const float3& newColor) {
     float3 ret;
