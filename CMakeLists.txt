@@ -40,8 +40,8 @@ set(QT_PATH ${Qt5Core_DIR}/../../..)
 # Populate a CMake variable with the sources
 set(SRC_DIR "src")
 set(GUI_SRC_DIR "${SRC_DIR}/gui")
-set(CUDA_SRC_DIR "${SRC_DIR}/cuda")
-include_directories(${GUI_SRC_DIR} ${CUDA_SRC_DIR} "${SRC_DIR}/include")
+set(PAINTER_SRC_DIR "${SRC_DIR}/painter")
+include_directories(${GUI_SRC_DIR} ${PAINTER_SRC_DIR} "${SRC_DIR}/include")
 
 file(GLOB_RECURSE PROJECT_SRCS
 	"${GUI_SRC_DIR}/*.h"
@@ -53,10 +53,10 @@ file(GLOB_RECURSE PROJECT_SRCS
     "${SRC_DIR}/*.cpp"
     "${SRC_DIR}/*.c"
 
-	"${CUDA_SRC_DIR}/*.cu"
-    "${CUDA_SRC_DIR}/*.cpp"
-    "${CUDA_SRC_DIR}/*.cuh"
-	"${CUDA_SRC_DIR}/*.h"
+	"${PAINTER_SRC_DIR}/*.cu"
+    "${PAINTER_SRC_DIR}/*.cpp"
+    "${PAINTER_SRC_DIR}/*.cuh"
+	"${PAINTER_SRC_DIR}/*.h"
 )
 
 # Enable C++14 for host code
