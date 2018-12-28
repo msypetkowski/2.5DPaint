@@ -102,16 +102,21 @@ float brushTest(BrushType brushType) {
 	}
 
 	cout << "Average time for CPU: " << std::accumulate(cpu_paint_times.begin(), cpu_paint_times.end(), 0.f) / cpu_paint_times.size() << "ms\n";
+    cout << "Min time for CPU: " << *std::min_element(cpu_paint_times.begin(), cpu_paint_times.end()) << "ms\n";
 	cout << "Average time for GPU: " << std::accumulate(gpu_paint_times.begin(), gpu_paint_times.end(), 0.f) / gpu_paint_times.size() << "ms\n";
-	return compareBuffers(buf_size, pbo1, pbo2);
+    cout << "Min time for GPU: " << *std::min_element(gpu_paint_times.begin(), gpu_paint_times.end()) << "ms\n";
+    return compareBuffers(buf_size, pbo1, pbo2);
 }
 
 
 int runTests() {
-	float e1 = brushTest(BrushType::Default);
-	float e2 = brushTest(BrushType::Textured);
-	cout << "Max errors in color space (0-255): " << endl;
-	cout << "Max error default: " << e1 << endl;
-	cout << "Max error textured: " << e2 << endl;
+    cout << "Default brush tests:" << endl;
+    brushTest(BrushType::Default);
+
+    cout << endl;
+
+    cout << "Textured brush tests:" << endl;
+    brushTest(BrushType::Textured);
+
 	return 0;
 }
