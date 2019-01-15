@@ -2,7 +2,7 @@
 #include "helper_math.h"
 
 #ifndef M_PI  // workaround since apparently different versions of math.h may or may not define the constant
-#   define M_PI 3.14f
+#   define M_PI 3.14159265358979323846f
 #endif
 
 float3 interpolate_color(float3 oldColor, float strength, const float3& newColor) {
@@ -14,16 +14,16 @@ float3 interpolate_color(float3 oldColor, float strength, const float3& newColor
 
 float cosine_fallof(float val, float falloff) {
     val = powf(val, falloff);
-    return (cosf(val  * (float)M_PI) + 1.0f) * 0.5f;
+    return (cospif(val) + 1.0f) * 0.5f;
 }
 
 
 float normal_from_delta(float dx) {
-    return dx / sqrtf(dx * dx + 1.0f);
+    return dx * rsqrtf(dx * dx + 1.0f);
 }
 
 float normal_z_from_delta(float dx) {
-    return 1.0f / sqrtf(dx * dx + 1.0f);
+    return rsqrtf(dx * dx + 1.0f);
 }
 
 int2 get_coords(int x, int y, int w, int h, int width, int height) {

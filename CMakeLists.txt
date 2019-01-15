@@ -68,7 +68,7 @@ set(CMAKE_CXX_STANDARD 14)
 list(APPEND CUDA_NVCC_FLAGS_DEBUG -G -g)
 
 # Specify CUDA nvcc flags
-list(APPEND CUDA_NVCC_FLAGS -arch=sm_35)
+list(APPEND CUDA_NVCC_FLAGS -arch=sm_35 -O3)
 
 # Linux-specific hacks/fixes
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
