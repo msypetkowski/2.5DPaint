@@ -3,4 +3,4 @@
 
 #endif // TESTS_H
 
-int runTests();
+int runTests(int argc, char *argv[]);

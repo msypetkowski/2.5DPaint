@@ -1,5 +1,6 @@
 #include <iostream>
 #include <algorithm>
+#include <iomanip>
 using namespace std;
 
 #include "cuda_runtime.h"
@@ -7,6 +8,8 @@ using namespace std;
 
 #include "cpu_painter.h"
 #include "gpu_painter.h"
+
+#define OUTPUT_WIDTH    30
 
 float compareBuffers(int buf_size, uchar4 *buf1, uchar4 *buf2) {
     uchar4 *b1 = new uchar4[buf_size];
@@ -26,13 +29,13 @@ float compareBuffers(int buf_size, uchar4 *buf1, uchar4 *buf2) {
         maxError = max(maxError, abs(b1[i].z - b2[i].z));
         maxError = max(maxError, abs(b1[i].w - b2[i].w));
     }
-    cout << "Average error: " << (float)sum / buf_size << endl;
-    cout << "Max error in pixel space (int from [0,255]): " << maxError << endl;
+    cout << left << std::setw(OUTPUT_WIDTH) << "Average error: " << (float)sum / buf_size << endl;
+    cout << left << std::setw(OUTPUT_WIDTH) << "Max error in pixel space (int from [0,255]): " << maxError << endl;
 
     return maxError;
 }
 
-float brushTest(BrushType brushType) {
+float brushTest(BrushType brushType, int brush_size) {
     int dim1, dim2;
     dim1 = 1234;
     dim2 = 1234;
@@ -47,7 +50,7 @@ float brushTest(BrushType brushType) {
     bs.falloff = 0.5;
     bs.heightPressure = 1.00;
     bs.pressure = 0.5;
-    bs.size = 200;
+    bs.size = brush_size;
     bs.normalBending = 1;
 
     CPUPainter cpu;
@@ -101,22 +104,43 @@ float brushTest(BrushType brushType) {
         gpu_paint_times.push_back(gpu.getLastPaintingTime());
     }
 
-    cout << "Average time for CPU: " << std::accumulate(cpu_paint_times.begin(), cpu_paint_times.end(), 0.f) / cpu_paint_times.size() << "ms\n";
-    cout << "Min time for CPU: " << *std::min_element(cpu_paint_times.begin(), cpu_paint_times.end()) << "ms\n";
-    cout << "Average time for GPU: " << std::accumulate(gpu_paint_times.begin(), gpu_paint_times.end(), 0.f) / gpu_paint_times.size() << "ms\n";
-    cout << "Min time for GPU: " << *std::min_element(gpu_paint_times.begin(), gpu_paint_times.end()) << "ms\n";
+    auto average_cpu = std::accumulate(cpu_paint_times.begin(), cpu_paint_times.end(), 0.f) / cpu_paint_times.size();
+    auto average_gpu = std::accumulate(gpu_paint_times.begin(), gpu_paint_times.end(), 0.f) / gpu_paint_times.size();
+
+    auto average_acceleration = average_cpu / average_gpu;
+
+    cout << left << std::setw(OUTPUT_WIDTH) << "Brush size: " << bs.size << "px\n";
+    cout << left << std::setw(OUTPUT_WIDTH) << "Average time for CPU: " << average_cpu << "ms\n";
+    cout << left << std::setw(OUTPUT_WIDTH) << "Min time for CPU: " << *std::min_element(cpu_paint_times.begin(), cpu_paint_times.end()) << "ms\n";
+    cout << left << std::setw(OUTPUT_WIDTH) << "Average time for GPU: " << average_gpu << "ms\n";
+    cout << left << std::setw(OUTPUT_WIDTH) << "Min time for GPU: " << *std::min_element(gpu_paint_times.begin(), gpu_paint_times.end()) << "ms\n";
+    cout << left << std::setw(OUTPUT_WIDTH) << "Average acceleration: " << std::setprecision(3) << average_acceleration << " x times\n";
     return compareBuffers(buf_size, pbo1, pbo2);
 }
 
 
-int runTests() {
+int runTests(int argc, char *argv[]) {
+    // turn off clog for test duration
+    std::clog.setstate(std::ios_base::failbit);
+
+    int brush_size = 200;
+    if (argc > 2) {
+        brush_size = atoi(argv[2]);
+    }
+
+    cout << "----------------------------------------------------" << endl;
     cout << "Default brush tests:" << endl;
-    brushTest(BrushType::Default);
+    brushTest(BrushType::Default, brush_size);
 
-    cout << endl;
-
+    cout << "----------------------------------------------------" << endl;
     cout << "Textured brush tests:" << endl;
-    brushTest(BrushType::Textured);
+    brushTest(BrushType::Textured, brush_size);
 
+    cout << "----------------------------------------------------" << endl;
+    cout << "Smooth brush tests:" << endl;
+    brushTest(BrushType::Smooth, brush_size);
+
+    // turn on clog
+    std::clog.clear();
     return 0;
 }
