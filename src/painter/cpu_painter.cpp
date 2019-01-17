@@ -59,8 +59,10 @@ void CPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     printf("[CPU] init/resize cpu buffers (%d, %d)\n", w, h);
     buffer.resize(buf_size);
     bufferColor.resize(buf_size);
+    swapbufferColor.resize(buf_size);
     bufferHeight.resize(buf_size);
     swapbufferHeight.resize(buf_size);
+    maskBuffer.resize(buf_size);
 
     checkCudaErrors(cudaMemcpy(buffer.data(), pbo, buf_size * sizeof(uchar4), cudaMemcpyDeviceToHost));
 
@@ -71,6 +73,7 @@ void CPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
     buffer_color = bufferColor.data();
     buffer_height = bufferHeight.data();
     swap_buffer_height = swapbufferHeight.data();
+    swap_buffer_color = swapbufferColor.data();
 
     updateWholeDisplay();
 }
@@ -78,8 +81,10 @@ void CPUPainter::setDimensions(int w1, int h1, uchar4 *pbo) {
 void CPUPainter::clearImage(float3 color, float height) {
 
     bufferColor.fill(color);
+    swapbufferColor.fill(color);
     bufferHeight.fill(height);
     swapbufferHeight.fill(height);
+    // no need to fill mask buffer
 
     std::clog << "[CPU] Clear image\n";
 }
@@ -96,6 +101,9 @@ void CPUPainter::setBrushType(BrushType type) {
             break;
         case BrushType::Smooth:
             paint_function = std::bind(&CPUPainter::brushSmooth, this, _1, _2);
+            break;
+        case BrushType::Inflate:
+            paint_function = std::bind(&CPUPainter::brushInflate, this, _1, _2);
             break;
         default:
             throw std::runtime_error("Invalid brush type: "
@@ -157,6 +165,12 @@ void CPUPainter::swapHeightBuffer() {
     swap_buffer_height = tmp;
 }
 
+void CPUPainter::swapColorBuffer() {
+    float3* tmp = buffer_color;
+    buffer_color = swap_buffer_color;
+    swap_buffer_color = tmp;
+}
+
 
 /**********************************************************************************************************************/
 /*
@@ -179,11 +193,12 @@ void CPUPainter::brushBasic(int mx, int my) {
             float strength = brushSettings.pressure * cosine_fallof(radius / brush_radius, brushSettings.falloff);
             float3 color = interpolate_color(buffer_color[i], strength, brushSettings.color);
             buffer_color[i] = color;
+            swap_buffer_color[i] = color;
 
             // paint height
             strength = brushSettings.heightPressure * cosine_fallof(radius / brush_radius, brushSettings.falloff);
 
-            float result = clamp(buffer_height[i] + strength, -1.0f, 1.0f);
+            float result = clamp(buffer_height[i] + strength, -100.0f, 100.0f);
 
             buffer_height[i] = result;
             swap_buffer_height[i] = result;
@@ -224,9 +239,11 @@ void CPUPainter::brushTextured(int mx, int my) {
 
             const auto pixel = color_image.pixel(color_coords.x, color_coords.y);
 
-            buffer_color[i] = interpolate_color(buffer_color[i],
+            const auto color = interpolate_color(buffer_color[i],
                                                 strength,
                                                 make_float3(qRed(pixel), qGreen(pixel), qBlue(pixel)));
+            buffer_color[i] = color;
+            swap_buffer_color[i] = color;
 
             const auto height_coords = get_coords(x - mx + maxRadius,
                                                   y - my + maxRadius,
@@ -283,6 +300,103 @@ void CPUPainter::brushSmooth(int mx, int my) {
     }
     swapHeightBuffer();
     updatePainted(mx, my);
+}
+
+
+void CPUPainter::brushInflate(int mx, int my)
+{
+    float brush_draw_radius = brushSettings.size / 2;
+    float brush_radius = brushSettings.size * 2;
+
+    // clear part of mask buffer that will be used
+    for (int x = mx - brush_radius + 1; x < mx + brush_radius; ++x) {
+        for (int y = my - brush_radius + 1; y < my + brush_radius; ++y) {
+            if (!inBounds(x, y))
+                continue;
+            int i = getBufferIndex(x,y);
+            maskBuffer[i] = false;
+        }
+    }
+
+    float3 origin = {(float)mx, (float)my, buffer_height[getBufferIndex(mx,my)]};
+    for (int x = mx - brush_radius + 1; x < mx + brush_radius; ++x) {
+        for (int y = my - brush_radius + 1; y < my + brush_radius; ++y) {
+            if (!inBounds(x, y))
+                continue;
+            int i = getBufferIndex(x,y);
+            float3 location = {(float)x, (float)y, buffer_height[i]};
+            float radius = length(origin - location);
+            // if (radius > brush_radius) {
+            //     continue;
+            // }
+
+            float3 normal = getNormal(x, y);
+            // TODO: make smooth fade-out
+            float strength = brushSettings.heightPressure * cosine_fallof(fminf(radius / brush_draw_radius, 1.0), brushSettings.falloff);
+
+            // this formula can be easily changed for other similar brushes e.g. flatten, pinch or clay
+            // interpolation and faloff settings should be adjusted accordingly
+            float3 newLocation = location + normal * strength;
+
+            maskBuffer[i] = maskBuffer[i] || strength < 0.001;
+            int newX = (int)newLocation.x, newY = (int)newLocation.y;
+
+            if (!inBounds(newX, newY))
+                continue;
+
+            int j = getBufferIndex(newX, newY);
+            swap_buffer_color[j] = buffer_color[i];
+            swap_buffer_height[j] = newLocation.z;
+            maskBuffer[j] = true;
+        }
+    }
+
+    // interpolate missing values (TODO: improve / get rid of noise)
+    for (int x = mx - brush_radius + 1; x < mx + brush_radius; ++x) {
+        for (int y = my - brush_radius + 1; y < my + brush_radius; ++y) {
+            int i = getBufferIndex(x,y);
+            if (!inBounds(x, y) || maskBuffer[i])
+                continue;
+            float closestHeight = 0;
+            float3 closestColor({0,0,0});
+            float minDist = std::numeric_limits<float>::infinity();
+            int maxPositionOffset = (int)brushSettings.heightPressure + 1;
+            for (int x2 = x - maxPositionOffset + 1; x2 < x + maxPositionOffset; ++x2) {
+                for (int y2 = y - maxPositionOffset + 1; y2 < y + maxPositionOffset; ++y2) {
+                    if (!inBounds(x2, y2))
+                        continue;
+                    int j = getBufferIndex(x2,y2);
+                    float dist = sqrt((x2-x)*(x2-x) + (y2-y)*(y2-y));
+                    if (maskBuffer[j] && dist < minDist) {
+                        closestHeight = swap_buffer_height[j];
+                        closestColor = swap_buffer_color[j];
+                        minDist = dist;
+                    }
+                }
+            }
+            swap_buffer_color[i] = closestColor;
+            swap_buffer_height[i] = closestHeight;
+        }
+    }
+
+    // keep buffers and swap buffers consistency
+    for (int x = mx - brush_radius + 1; x < mx + brush_radius; ++x) {
+        for (int y = my - brush_radius + 1; y < my + brush_radius; ++y) {
+            if (!inBounds(x, y))
+                continue;
+            int i = getBufferIndex(x,y);
+            buffer_color[i] = swap_buffer_color[i];
+            buffer_height[i] = swap_buffer_height[i];
+        }
+    }
+
+    // updatePainted(mx, my);
+    float maxRadius = brush_radius;
+    for (int x = mx - maxRadius + 1; x < mx + maxRadius; ++x) {
+        for (int y = my - maxRadius + 1; y < my + maxRadius; ++y) {
+            updatePixelDisplay(x, y);
+        }
+    }
 }
 
 /*

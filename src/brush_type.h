@@ -4,4 +4,5 @@ enum class BrushType {
     Default,
     Textured,
     Smooth,
+    Inflate,
 };

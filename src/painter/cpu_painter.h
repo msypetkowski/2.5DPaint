@@ -27,6 +27,7 @@ public:
     void pullBufferFromDevice(uchar4 *pbo);
     void sendBufferToDevice(uchar4 *pbo);
     void swapHeightBuffer();
+    void swapColorBuffer();
     float* getHeightBuffer() {return buffer_height; }
     float* getSwapHeightBuffer() {return swap_buffer_height; }
     float3* getColorBuffer() {return buffer_color; }
@@ -42,6 +43,7 @@ public:
     void brushBasic(int mx, int my);
     void brushTextured(int mx, int my);
     void brushSmooth(int mx, int my);
+    void brushInflate(int mx, int my);
 
 private:
 
@@ -56,8 +58,10 @@ private:
 
     // internal representation buffers
     QVector<float3> bufferColor;
+    QVector<float3> swapbufferColor;
     QVector<float> bufferHeight;
     QVector<float> swapbufferHeight;
+    QVector<bool> maskBuffer;
 
     // buffer for display information
     QVector<uchar4> buffer;

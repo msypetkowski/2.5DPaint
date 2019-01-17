@@ -45,6 +45,7 @@ protected:
     float* buffer_height = nullptr;
 
     float* swap_buffer_height = nullptr;
+    float3* swap_buffer_color = nullptr;
 
     //paint function
     std::function<void(int, int)> paint_function;

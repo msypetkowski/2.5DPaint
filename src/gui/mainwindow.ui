@@ -48,7 +48,7 @@
      <x>0</x>
      <y>0</y>
      <width>900</width>
-     <height>22</height>
+     <height>13</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -123,6 +123,13 @@
           </property>
           <property name="text">
            <string>Smooth</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="inflateBrush">
+          <property name="text">
+           <string>Inflate</string>
           </property>
          </widget>
         </item>
@@ -243,16 +250,16 @@
           <item>
            <widget class="QDoubleSpinBox" name="heightPressureSpinBox">
             <property name="decimals">
-             <number>3</number>
+             <number>2</number>
             </property>
             <property name="minimum">
              <double>-100.000000000000000</double>
             </property>
             <property name="singleStep">
-             <double>0.010000000000000</double>
+             <double>0.100000000000000</double>
             </property>
             <property name="value">
-             <double>0.010000000000000</double>
+             <double>1.000000000000000</double>
             </property>
            </widget>
           </item>
@@ -334,13 +341,13 @@
              <number>2</number>
             </property>
             <property name="maximum">
-             <double>99999.000000000000000</double>
+             <double>100.000000000000000</double>
             </property>
             <property name="singleStep">
              <double>1.000000000000000</double>
             </property>
             <property name="value">
-             <double>100.000000000000000</double>
+             <double>1.000000000000000</double>
             </property>
            </widget>
           </item>
