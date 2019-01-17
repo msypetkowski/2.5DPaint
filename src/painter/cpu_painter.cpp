@@ -198,7 +198,7 @@ void CPUPainter::brushBasic(int mx, int my) {
             // paint height
             strength = brushSettings.heightPressure * cosine_fallof(radius / brush_radius, brushSettings.falloff);
 
-            float result = clamp(buffer_height[i] + strength, -100.0f, 100.0f);
+            float result = clamp(buffer_height[i] + strength, -1000.0f, 1000.0f);
 
             buffer_height[i] = result;
             swap_buffer_height[i] = result;
@@ -306,7 +306,7 @@ void CPUPainter::brushSmooth(int mx, int my) {
 void CPUPainter::brushInflate(int mx, int my)
 {
     float brush_draw_radius = brushSettings.size / 2;
-    float brush_radius = brushSettings.size * 2;
+    float brush_radius = brushSettings.size;
 
     // clear part of mask buffer that will be used
     for (int x = mx - brush_radius + 1; x < mx + brush_radius; ++x) {
@@ -325,7 +325,7 @@ void CPUPainter::brushInflate(int mx, int my)
                 continue;
             int i = getBufferIndex(x,y);
             float3 location = {(float)x, (float)y, buffer_height[i]};
-            float radius = length(origin - location);
+            float radius = length(location - origin);
             // if (radius > brush_radius) {
             //     continue;
             // }
@@ -339,7 +339,7 @@ void CPUPainter::brushInflate(int mx, int my)
             float3 newLocation = location + normal * strength;
 
             maskBuffer[i] = maskBuffer[i] || strength < 0.001;
-            int newX = (int)newLocation.x, newY = (int)newLocation.y;
+            int newX = (int)(newLocation.x + 0.5), newY = (int)(newLocation.y + 0.5);
 
             if (!inBounds(newX, newY))
                 continue;
@@ -358,9 +358,9 @@ void CPUPainter::brushInflate(int mx, int my)
             if (!inBounds(x, y) || maskBuffer[i])
                 continue;
             float closestHeight = 0;
-            float3 closestColor({0,0,0});
+            float3 closestColor({0,0,255});
             float minDist = std::numeric_limits<float>::infinity();
-            int maxPositionOffset = (int)brushSettings.heightPressure + 1;
+            int maxPositionOffset = (int)brushSettings.heightPressure + 10;
             for (int x2 = x - maxPositionOffset + 1; x2 < x + maxPositionOffset; ++x2) {
                 for (int y2 = y - maxPositionOffset + 1; y2 < y + maxPositionOffset; ++y2) {
                     if (!inBounds(x2, y2))
