@@ -45,10 +45,10 @@ float brushTest(BrushType brushType) {
     BrushSettings bs;
     bs.color = float3({123,20,220});
     bs.falloff = 0.5;
-    bs.heightPressure = 0.02;
+    bs.heightPressure = 1.00;
     bs.pressure = 0.5;
     bs.size = 200;
-    bs.normalBending = 100;
+    bs.normalBending = 1;
 
     CPUPainter cpu;
     cpu.setDimensions(dim1, dim2, pbo1);

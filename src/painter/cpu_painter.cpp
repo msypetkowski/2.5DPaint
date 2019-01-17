@@ -256,7 +256,7 @@ void CPUPainter::brushTextured(int mx, int my) {
 
             strength = brushSettings.heightPressure * height * cosine_fallof(radius / maxRadius, brushSettings.falloff);
 
-            float result = clamp(buffer_height[i] + strength, -1.0f, 1.0f);
+            float result = clamp(buffer_height[i] + strength, -1000.0f, 1000.0f);
 
             buffer_height[i] = result;
             swap_buffer_height[i] = result;

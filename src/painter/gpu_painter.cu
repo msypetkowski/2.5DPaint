@@ -254,7 +254,7 @@ void brushBasic_GPU_KERNEL(int mx, int my, const BrushSettings bs, const KernelA
             strength = bs.heightPressure * cosine_fallof(radius / brush_radius, bs.falloff);
 
             // calculate current pixel height
-            float result = clamp(args.buff_height_dptr[i] + strength, -1.0f, 1.0f);
+            float result = clamp(args.buff_height_dptr[i] + strength, -1000.0f, 1000.0f);
 
             // store height in 2 buffers (swap buffer also has to be updated because it is used in smooth brush later)
             args.buff_height_dptr[i] = result;
@@ -324,7 +324,7 @@ void brushTextured_GPU_KERNEL(int mx, int my, const BrushSettings bs, const Kern
         // calculate brush strength for height
         strength = bs.heightPressure * height * cosine_fallof(radius / brush_radius, bs.falloff);
 
-        float result = clamp(args.buff_height_dptr[i] + strength, -1.0f, 1.0f);
+        float result = clamp(args.buff_height_dptr[i] + strength, -1000.0f, 1000.0f);
 
         // store height in 2 buffers (swap buffer also has to be updated because it is used in smooth brush later)
         args.buff_height_dptr[i] = result;
